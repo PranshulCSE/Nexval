@@ -7,8 +7,10 @@ import { TeamsPage } from './pages/TeamsPage';
 import { JudgesPage } from './pages/JudgesPage';
 import { RoundsPage } from './pages/RoundsPage';
 import { JudgeDashboard } from './pages/JudgeDashboard';
+import { JudgeScoringPage } from './pages/JudgeScoringPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
 
 
 const RootRedirect: React.FC = () => {
@@ -84,13 +86,22 @@ export const App: React.FC = () => {
 
       {/* Judge routes with role guard */}
       <Route
-        path="/judge/*"
+        path="/judge"
         element={
           <ProtectedRoute allowedRoles={['judge', 'mentor']}>
             <JudgeDashboard />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/judge/evaluate/:roundId/:teamId"
+        element={
+          <ProtectedRoute allowedRoles={['judge', 'mentor']}>
+            <JudgeScoringPage />
+          </ProtectedRoute>
+        }
+      />
+
 
       {/* Catch-all 404 */}
       <Route path="*" element={<NotFoundPage />} />
