@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+
 import { Layout } from '../components/Layout';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -53,6 +54,32 @@ export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('audit');
   const [selectedAudit, setSelectedAudit] = useState<AuditItem | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditItem[]>(SAMPLE_AUDIT_LOGS);
+
+  useEffect(() => {
+    const fetchAudit = async () => {
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        const res = await fetch(`${backendUrl}/api/v1/audit-log`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.audit_logs && data.audit_logs.length > 0) {
+            const mapped = data.audit_logs.map((row: any) => ({
+              id: row.id,
+              timestamp: new Date(row.created_at).toLocaleString(),
+              actor: row.actor,
+              action: row.action,
+              entity: row.entity_type,
+              details: typeof row.details === 'object' ? JSON.stringify(row.details) : String(row.details),
+            }));
+            setAuditLogs(mapped);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchAudit();
+  }, []);
+
 
 
   const tabs = [
@@ -66,7 +93,9 @@ export const AdminDashboard: React.FC = () => {
     { label: 'Teams', href: '/admin/teams' },
     { label: 'Judges', href: '/admin/judges' },
     { label: 'Rounds', href: '/admin/rounds' },
+    { label: 'Assignments', href: '/admin/assignments' },
   ];
+
 
 
   const auditColumns: Column<AuditItem>[] = [
@@ -193,7 +222,7 @@ export const AdminDashboard: React.FC = () => {
           <div>
             <p className="text-xs font-medium text-slate-500">Audit Logs</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <h4 className="text-2xl font-bold text-slate-900 tracking-tight">{SAMPLE_AUDIT_LOGS.length}</h4>
+              <h4 className="text-2xl font-bold text-slate-900 tracking-tight">{auditLogs.length}</h4>
               <Badge variant="gray" className="text-[9px] py-0">Immutable</Badge>
             </div>
           </div>
@@ -202,7 +231,15 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Tabs Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <PillTabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        <PillTabs
+          tabs={[
+            { id: 'audit', label: 'Audit Log (Append-Only)', count: auditLogs.length },
+            { id: 'judges', label: 'Judges Roster', count: 3 },
+            { id: 'overview', label: 'Rounds' },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
         <span className="text-xs text-slate-400 font-medium">
           Rule 4 Enforced: UPDATE/DELETE blocked by DB Trigger
         </span>
@@ -212,7 +249,7 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === 'audit' && (
         <Table
           columns={auditColumns}
-          data={SAMPLE_AUDIT_LOGS}
+          data={auditLogs}
           keyExtractor={(item) => item.id}
           emptyMessage="No audit logs available."
         />

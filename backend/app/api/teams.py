@@ -122,7 +122,228 @@ DEMO_TEAMS: List[Dict[str, Any]] = [
         "status": "active",
         "current_round": 1,
         "created_at": "2026-11-17T12:45:00Z"
+    },
+    {
+        "id": "t-011",
+        "team_id": "NEX-11",
+        "team_name": "Neural Net Ninjas",
+        "college": "BITS Pilani",
+        "members": ["Rohan Sengupta", "Diya Banerjee"],
+        "extra_data": {"project": "Sign Language Voice Synth", "track": "Accessibility"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T12:50:00Z"
+    },
+    {
+        "id": "t-012",
+        "team_id": "NEX-12",
+        "team_name": "Cloud Crafters",
+        "college": "Geeta University",
+        "members": ["Manish Kumar", "Sakshi Malik"],
+        "extra_data": {"project": "Autonomous Serverless Scaling", "track": "DevOps"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T12:55:00Z"
+    },
+    {
+        "id": "t-013",
+        "team_id": "NEX-13",
+        "team_name": "ZeroKnowledge",
+        "college": "IIIT Delhi",
+        "members": ["Tarun Gill", "Komal Sethi"],
+        "extra_data": {"project": "Private Medical Ledger", "track": "Web3"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:00:00Z"
+    },
+    {
+        "id": "t-014",
+        "team_id": "NEX-14",
+        "team_name": "EcoPulse",
+        "college": "Chitkara University",
+        "members": ["Abhinav Bansal", "Rhea Jain"],
+        "extra_data": {"project": "Smart EV Fleet Routing", "track": "CleanTech"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:05:00Z"
+    },
+    {
+        "id": "t-015",
+        "team_id": "NEX-15",
+        "team_name": "HyperLoop Devs",
+        "college": "Geeta University",
+        "members": ["Gaurav Soni", "Anushka Tyagi"],
+        "extra_data": {"project": "AI Traffic Signal Harmonizer", "track": "Smart Cities"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:10:00Z"
+    },
+    {
+        "id": "t-016",
+        "team_id": "NEX-16",
+        "team_name": "Data Dragons",
+        "college": "IIT Roorkee",
+        "members": ["Siddharth Das", "Pragya Mishra"],
+        "extra_data": {"project": "Subsurface Water Aquifer Radar", "track": "AgriTech"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:15:00Z"
+    },
+    {
+        "id": "t-017",
+        "team_id": "NEX-17",
+        "team_name": "Pixel Pioneers",
+        "college": "DTU",
+        "members": ["Kunal Khanna", "Ritu Rawat"],
+        "extra_data": {"project": "Real-Time Deepfake Sentinel", "track": "Cybersecurity"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:20:00Z"
+    },
+    {
+        "id": "t-018",
+        "team_id": "NEX-18",
+        "team_name": "BioSensors X",
+        "college": "Geeta University",
+        "members": ["Sameer Khan", "Tanya Dutta"],
+        "extra_data": {"project": "Non-Invasive Glucose Patch", "track": "Healthcare"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:25:00Z"
+    },
+    {
+        "id": "t-019",
+        "team_id": "NEX-19",
+        "team_name": "BlockChamps",
+        "college": "NSUT",
+        "members": ["Varun Chawla", "Palak Gandhi"],
+        "extra_data": {"project": "Carbon Credit Exchange", "track": "Web3"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:30:00Z"
+    },
+    {
+        "id": "t-020",
+        "team_id": "NEX-20",
+        "team_name": "RoboRaptors",
+        "college": "Thapar University",
+        "members": ["Karanbir Dhillon", "Jasleen Sandhu"],
+        "extra_data": {"project": "Warehouse Micro-Swarm", "track": "Robotics"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:35:00Z"
+    },
+    {
+        "id": "t-021",
+        "team_id": "NEX-21",
+        "team_name": "Aegis Sentinel",
+        "college": "PEC Chandigarh",
+        "members": ["Nitesh Mittal", "Shreya Sood"],
+        "extra_data": {"project": "Critical Infrastructure Honeypot", "track": "Cybersecurity"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:40:00Z"
+    },
+    {
+        "id": "t-022",
+        "team_id": "NEX-22",
+        "team_name": "Zenith AI",
+        "college": "Geeta University",
+        "members": ["Akhil Bhardwaj", "Neha Chhabra"],
+        "extra_data": {"project": "Mental Health Companion Bot", "track": "Healthcare"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:45:00Z"
+    },
+    {
+        "id": "t-023",
+        "team_id": "NEX-23",
+        "team_name": "Solaris Minds",
+        "college": "Kurukshetra University",
+        "members": ["Ajay Ahlawat", "Jyoti Sharma"],
+        "extra_data": {"project": "Solar Cell Thermal Dissipater", "track": "CleanTech"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:50:00Z"
+    },
+    {
+        "id": "t-024",
+        "team_id": "NEX-24",
+        "team_name": "FinNova",
+        "college": "IIT Delhi",
+        "members": ["Udit Narayan", "Chhavi Agarwal"],
+        "extra_data": {"project": "Micro-Lending Underwriting AI", "track": "Fintech"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T13:55:00Z"
+    },
+    {
+        "id": "t-025",
+        "team_id": "NEX-25",
+        "team_name": "AquaRescue",
+        "college": "Geeta University",
+        "members": ["Vikas Yadav", "Suman Lata"],
+        "extra_data": {"project": "Smart Flood Sensor Buoys", "track": "IoT"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T14:00:00Z"
+    },
+    {
+        "id": "t-026",
+        "team_id": "NEX-26",
+        "team_name": "MetaMinds",
+        "college": "Chitkara University",
+        "members": ["Devanshu Garg", "Nikita Goyal"],
+        "extra_data": {"project": "Haptic Surgical Training VR", "track": "Healthcare"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T14:05:00Z"
+    },
+    {
+        "id": "t-027",
+        "team_id": "NEX-27",
+        "team_name": "Spectra Dynamics",
+        "college": "DTU",
+        "members": ["Aniket Saxena", "Suhani Taneja"],
+        "extra_data": {"project": "Satellite Methane Plume Spotter", "track": "CleanTech"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T14:10:00Z"
+    },
+    {
+        "id": "t-028",
+        "team_id": "NEX-28",
+        "team_name": "SecureMesh",
+        "college": "Geeta University",
+        "members": ["Pankaj Dhiman", "Deepika Kaushik"],
+        "extra_data": {"project": "Peer-to-Peer Disaster Mesh", "track": "Cybersecurity"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T14:15:00Z"
+    },
+    {
+        "id": "t-029",
+        "team_id": "NEX-29",
+        "team_name": "Veloce AI",
+        "college": "BITS Pilani",
+        "members": ["Rishabh Bajaj", "Manya Singhania"],
+        "extra_data": {"project": "Autonomous Delivery Rover", "track": "Robotics"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T14:20:00Z"
+    },
+    {
+        "id": "t-030",
+        "team_id": "NEX-30",
+        "team_name": "Genesis Labs",
+        "college": "Geeta University",
+        "members": ["Harshit Tanwar", "Simran Walia"],
+        "extra_data": {"project": "Zero-Waste Supply Chain Tracker", "track": "CleanTech"},
+        "status": "active",
+        "current_round": 1,
+        "created_at": "2026-11-17T14:25:00Z"
     }
+
 ]
 
 def get_supabase_client() -> Optional[Client]:
