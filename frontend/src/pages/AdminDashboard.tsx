@@ -9,8 +9,10 @@ import { Table, Column } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Users, Shield, Layers, FileText, Plus, Eye, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AuditItem {
+
   id: string;
   timestamp: string;
   actor: string;
@@ -48,8 +50,10 @@ const SAMPLE_AUDIT_LOGS: AuditItem[] = [
 
 export const AdminDashboard: React.FC = () => {
   const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('audit');
   const [selectedAudit, setSelectedAudit] = useState<AuditItem | null>(null);
+
 
   const tabs = [
     { id: 'audit', label: 'Audit Log (Append-Only)', count: SAMPLE_AUDIT_LOGS.length },
@@ -127,9 +131,9 @@ export const AdminDashboard: React.FC = () => {
           <Button
             variant="primary"
             leftIcon={<Plus className="w-4 h-4" />}
-            onClick={() => alert('Phase 1 will enable full team CSV upload and judge assignment.')}
+            onClick={() => navigate('/admin/teams')}
           >
-            Import Teams CSV
+            Manage & Import Teams
           </Button>
         }
       />

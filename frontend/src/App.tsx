@@ -3,11 +3,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { TeamsPage } from './pages/TeamsPage';
 import { JudgeDashboard } from './pages/JudgeDashboard';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 const RootRedirect: React.FC = () => {
+
   const { user, profile, isLoading } = useAuth();
 
   if (isLoading) {
@@ -43,13 +45,22 @@ export const App: React.FC = () => {
 
       {/* Admin routes with role guard */}
       <Route
-        path="/admin/*"
+        path="/admin"
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/teams"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <TeamsPage />
+          </ProtectedRoute>
+        }
+      />
+
 
       {/* Judge routes with role guard */}
       <Route
