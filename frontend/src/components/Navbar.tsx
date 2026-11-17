@@ -47,16 +47,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Link to="/" className="flex items-center gap-2.5 group">
             {/* Geeta University Logo Placeholder */}
             <img
-              src="/geeta-university-logo.svg"
+              src="/geeta-university-logo.webp"
               alt="Geeta University"
-              className="h-8 w-auto object-contain"
+              className="h-11 w-auto object-contain"
             />
             <span className="h-5 w-[1px] bg-slate-200 hidden sm:block" />
             {/* NexHack Logo Placeholder */}
             <img
-              src="/nexhack-logo.svg"
+              src="/nexhack-logo.webp"
               alt="NexHack 2.0"
-              className="h-7 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </Link>
           <div className="hidden lg:flex flex-col border-l border-slate-200 pl-3">

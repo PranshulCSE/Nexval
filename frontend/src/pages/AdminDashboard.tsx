@@ -63,10 +63,11 @@ export const AdminDashboard: React.FC = () => {
 
   const navItems = [
     { label: 'Admin Dashboard', href: '/admin' },
-    { label: 'Judges', href: '/admin/judges' },
     { label: 'Teams', href: '/admin/teams' },
-    { label: 'Audit Log', href: '/admin/audit' },
+    { label: 'Judges', href: '/admin/judges' },
+    { label: 'Rounds', href: '/admin/rounds' },
   ];
+
 
   const auditColumns: Column<AuditItem>[] = [
     {
@@ -140,7 +141,11 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card padding="sm" className="flex items-center gap-4">
+        <Card
+          padding="sm"
+          onClick={() => navigate('/admin/teams')}
+          className="flex items-center gap-4 cursor-pointer hover:border-slate-400 transition-colors"
+        >
           <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
             <Users className="w-5 h-5" />
           </div>
@@ -150,7 +155,11 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card padding="sm" className="flex items-center gap-4">
+        <Card
+          padding="sm"
+          onClick={() => navigate('/admin/judges')}
+          className="flex items-center gap-4 cursor-pointer hover:border-slate-400 transition-colors"
+        >
           <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
             <Shield className="w-5 h-5" />
           </div>
@@ -160,7 +169,11 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card padding="sm" className="flex items-center gap-4">
+        <Card
+          padding="sm"
+          onClick={() => navigate('/admin/rounds')}
+          className="flex items-center gap-4 cursor-pointer hover:border-slate-400 transition-colors"
+        >
           <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
             <Layers className="w-5 h-5" />
           </div>

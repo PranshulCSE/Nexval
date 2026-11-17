@@ -368,11 +368,12 @@ async def commit_upload(payload: CommitPayload):
 @router.get("")
 async def list_teams(
     search: Optional[str] = None,
-    status: Optional[str] = Query("all", regex="^(all|active|eliminated)$"),
+    status: Optional[str] = Query("all", pattern="^(all|active|eliminated)$"),
     round: Optional[int] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100)
 ):
+
     """
     List teams with search, filter by status and current round, and pagination.
     """

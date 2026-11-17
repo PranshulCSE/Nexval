@@ -4,9 +4,12 @@ import { useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeamsPage } from './pages/TeamsPage';
+import { JudgesPage } from './pages/JudgesPage';
+import { RoundsPage } from './pages/RoundsPage';
 import { JudgeDashboard } from './pages/JudgeDashboard';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+
 
 const RootRedirect: React.FC = () => {
 
@@ -60,6 +63,23 @@ export const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/judges"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <JudgesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/rounds"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <RoundsPage />
+          </ProtectedRoute>
+        }
+      />
+
 
 
       {/* Judge routes with role guard */}

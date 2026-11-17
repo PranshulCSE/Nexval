@@ -65,15 +65,15 @@ export const LoginPage: React.FC = () => {
         <div className="flex flex-col items-center justify-center text-center mb-8">
           <div className="flex items-center gap-3 mb-4">
             <img
-              src="/geeta-university-logo.svg"
+              src="/geeta-university-logo.webp"
               alt="Geeta University"
-              className="h-10 w-auto object-contain"
+              className="h-11 w-auto object-contain"
             />
-            <span className="h-6 w-[1px] bg-slate-300" />
+            <span className="h-8  w-[1px] bg-slate-300" />
             <img
-              src="/nexhack-logo.svg"
+              src="/nexhack-logo.webp"
               alt="NexHack 2.0"
-              className="h-9 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
