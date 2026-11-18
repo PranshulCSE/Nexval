@@ -10,7 +10,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { PillTabs } from '../components/ui/PillTabs';
-import { Trophy, Award, Radio, Users, CheckCircle2, AlertTriangle, Clock, Search, School, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+import { Trophy, Award, Radio, Users, CheckCircle2, AlertTriangle, Clock, Search, School, ArrowRight, Sparkles, AlertCircle, Download } from 'lucide-react';
+
 
 interface LeaderboardItem {
   rank: number;
@@ -60,6 +61,33 @@ export const LeaderboardPage: React.FC = () => {
   // Promotion modal state
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
   const [isPromoting, setIsPromoting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const res = await fetch(`${backendUrl}/api/v1/results/export/excel?round_number=${selectedRound}`);
+      if (!res.ok) throw new Error('Excel export failed');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NexHack_Round_${selectedRound}_Leaderboard.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      success('Report Exported', `Downloaded multi-sheet Excel report for Round ${selectedRound}.`);
+    } catch (err: any) {
+      error('Export Failed', err.message || 'Could not export Excel file.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
 
   const fetchResults = useCallback(async () => {
     try {
@@ -309,7 +337,18 @@ export const LeaderboardPage: React.FC = () => {
               <span>Realtime Sync Live ({lastUpdated})</span>
             </div>
 
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={isExporting}
+              onClick={handleExportExcel}
+              leftIcon={<Download className="w-3.5 h-3.5" />}
+            >
+              Export Excel Report
+            </Button>
+
             {selectedRound === 1 && (
+
               <Button
                 variant="primary"
                 size="sm"

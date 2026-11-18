@@ -371,8 +371,14 @@ async def get_round_leaderboard(
     }
 
 
+class PromotePayload(BaseModel):
+    round_number: int
+    promote_count: Optional[int] = None
+    actor_id: Optional[str] = None
+
 @router.post("/promote")
 async def promote_teams(payload: PromotePayload):
+
     """
     Promote top N teams to the next round based on tie-break rankings.
     - Round 1 -> Round 2: all teams advance (no cutoff, no elimination).

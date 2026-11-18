@@ -249,11 +249,14 @@ export const JudgeScoringPage: React.FC = () => {
   };
 
   const isRemarksOnly = round?.type === 'remarks' || round?.number === 1;
+  const isMentor = profile?.role === 'mentor';
+  const isMentorRestricted = isMentor && !isRemarksOnly;
 
   const navItems = [
     { label: 'My Teams', href: '/judge' },
     { label: 'Evaluation Guidelines', href: '/judge/guidelines' },
   ];
+
 
   if (isLoading) {
     return (
@@ -371,6 +374,22 @@ export const JudgeScoringPage: React.FC = () => {
         </Card>
       )}
 
+      {/* Mentor Role Restriction Notice */}
+      {isMentorRestricted && (
+        <Card className="mb-6 p-4 sm:p-5 bg-amber-50/60 border-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-900 leading-relaxed">
+              <p className="font-bold mb-1">Mentor Access Restriction</p>
+              <p className="text-amber-800">
+                As a Mentor, you are authorized to provide qualitative guidance during Round 1. Scoring rounds (Round 2 & 3) are restricted to official judges.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+
       {/* Locked Alert Banner */}
       {isLocked && (
         <Card className="mb-6 p-4 bg-emerald-50/50 border-emerald-200">
@@ -473,7 +492,7 @@ export const JudgeScoringPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {!isLocked && (
+          {!isLocked && !isMentorRestricted && (
             <Button
               variant="primary"
               size="md"
@@ -484,12 +503,18 @@ export const JudgeScoringPage: React.FC = () => {
               Submit & Lock
             </Button>
           )}
+          {isMentorRestricted && (
+            <span className="text-xs text-amber-700 font-semibold px-3 py-1.5 bg-amber-100/70 rounded-xl border border-amber-200">
+              Guidance Rounds Only
+            </span>
+          )}
           {isLocked && (
             <Button variant="outline" size="md" onClick={() => navigate('/judge')}>
               Back to Dashboard
             </Button>
           )}
         </div>
+
       </div>
 
       {/* Submission Confirmation Modal */}

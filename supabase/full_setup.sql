@@ -194,7 +194,9 @@ RETURNS TRIGGER AS $$
 DECLARE
     v_round_status TEXT;
     v_round_type TEXT;
+    v_user_role TEXT;
     v_computed_total NUMERIC(6, 2) := 0.00;
+
     v_criterion RECORD;
     v_criterion_score NUMERIC(6, 2);
     v_score_raw TEXT;
@@ -206,6 +208,15 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Referenced round does not exist.';
     END IF;
+
+    -- Check user role
+    SELECT role INTO v_user_role FROM public.profiles WHERE id = NEW.judge_id;
+
+    -- Non-negotiable Rule 5: Mentors can only evaluate in remarks-only rounds
+    IF v_user_role = 'mentor' AND v_round_type != 'remarks' THEN
+        RAISE EXCEPTION 'Mentors are only permitted to evaluate in guidance/remarks rounds. Scoring rounds are reserved for official judges.';
+    END IF;
+
 
     -- Rule 1: A judge can write an evaluation only if round is live
     IF v_round_status != 'live' AND NOT public.is_admin(auth.uid()) THEN

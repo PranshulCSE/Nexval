@@ -214,7 +214,23 @@ export const LoginPage: React.FC = () => {
                 </div>
                 <Badge variant="blue" className="text-[9px] py-0 px-1.5">judge</Badge>
               </button>
+
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('mentor@nexhack.com')}
+                className="flex items-center justify-between p-2.5 bg-white border border-slate-200/90 rounded-xl text-left hover:border-slate-400 hover:bg-slate-50 transition-all group sm:col-span-2"
+              >
+                <div>
+                  <p className="text-xs font-semibold text-slate-900 group-hover:text-slate-950 flex items-center">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600 mr-1.5" />
+                    Dr. Vikram Malhotra (Mentor)
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono">mentor@nexhack.com</p>
+                </div>
+                <Badge variant="green" className="text-[9px] py-0 px-1.5">mentor</Badge>
+              </button>
             </div>
+
           </div>
         </Card>
 

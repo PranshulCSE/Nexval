@@ -32,7 +32,15 @@ export const SEED_DEMO_USERS: Record<string, UserProfile & { password: string }>
     role: 'judge',
     password: 'password123',
   },
+  'mentor@nexhack.com': {
+    id: 'c0000000-0000-0000-0000-000000000001',
+    name: 'Dr. Vikram Malhotra (Mentor)',
+    email: 'mentor@nexhack.com',
+    role: 'mentor',
+    password: 'password123',
+  },
 };
+
 
 interface AuthContextType {
   user: User | null;
