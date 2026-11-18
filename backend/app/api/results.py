@@ -20,10 +20,197 @@ def get_supabase_client() -> Optional[Client]:
     return None
 
 
-class PromotePayload(BaseModel):
-    round_number: int
-    promote_count: Optional[int] = None
-    actor_id: Optional[str] = None
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from fastapi.responses import StreamingResponse
+
+@router.get("/export/excel")
+async def export_results_excel(
+    round_number: int = Query(2, description="Target round number for export")
+):
+    """
+    Multi-sheet Excel export using openpyxl:
+    - Sheet 1: Leaderboard (Rank, Team ID, Team Name, College, Track, Avg Total, Criteria averages, Evaluators count)
+    - Sheet 2: Judge-wise Breakdown (Detailed judge evaluations, marks per criterion, remarks)
+    - Sheet 3: Round Summary & Statistics
+    """
+    lb_data = await get_round_leaderboard(round_number=round_number)
+    leaderboard = lb_data["leaderboard"]
+    target_round = lb_data["round"]
+    criteria = lb_data["criteria"]
+
+    wb = Workbook()
+
+    # Style definitions (clean admin aesthetic)
+    navy_fill = PatternFill(start_color="0F172A", end_color="0F172A", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    bold_font = Font(name="Calibri", size=11, bold=True)
+    regular_font = Font(name="Calibri", size=11)
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin', color='E2E8F0'),
+        right=Side(style='thin', color='E2E8F0'),
+        top=Side(style='thin', color='E2E8F0'),
+        bottom=Side(style='thin', color='E2E8F0')
+    )
+
+    # ==========================================
+    # SHEET 1: Leaderboard
+    # ==========================================
+    ws_lb = wb.active
+    ws_lb.title = f"Round {round_number} Leaderboard"
+
+    lb_headers = [
+        "Rank", "Team ID", "Team Name", "College / Institution", "Track", 
+        "Status", "Average Total (/100)", "Completed Judges"
+    ]
+    for c in criteria:
+        lb_headers.append(f"{c['name']} (Max {c['max_marks']})")
+
+    ws_lb.append(lb_headers)
+
+    # Style header row
+    for col_idx in range(1, len(lb_headers) + 1):
+        cell = ws_lb.cell(row=1, column=col_idx)
+        cell.fill = navy_fill
+        cell.font = header_font
+        cell.alignment = center_align
+
+    # Add data rows
+    for item in leaderboard:
+        row = [
+            f"#{item['rank']}",
+            item["team_id"],
+            item["team_name"],
+            item.get("college", "Geeta University"),
+            item.get("track", "General"),
+            item.get("status", "active").upper(),
+            item["avg_total"],
+            f"{item['judges_completed_count']} / {item['judges_assigned_count']}"
+        ]
+        for c in criteria:
+            row.append(item["criterion_averages"].get(c["name"], 0.0))
+        ws_lb.append(row)
+
+    # Apply row styling & border
+    for row in ws_lb.iter_rows(min_row=2, max_row=len(leaderboard) + 1, min_col=1, max_col=len(lb_headers)):
+        for cell in row:
+            cell.font = regular_font
+            cell.border = thin_border
+            if cell.column == 1 or cell.column == 7:
+                cell.font = bold_font
+                cell.alignment = center_align
+
+    # Auto-adjust column widths
+    for col in ws_lb.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = col[0].column_letter
+        ws_lb.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    # ==========================================
+    # SHEET 2: Judge-wise Breakdown
+    # ==========================================
+    ws_jw = wb.create_sheet(title="Judge-wise Breakdown")
+    jw_headers = [
+        "Team ID", "Team Name", "College", "Judge Name", "Judge Role",
+        "Total Score (/100)", "Status", "Remarks / Feedback"
+    ]
+    for c in criteria:
+        jw_headers.append(f"{c['name']}")
+
+    ws_jw.append(jw_headers)
+    for col_idx in range(1, len(jw_headers) + 1):
+        cell = ws_jw.cell(row=1, column=col_idx)
+        cell.fill = navy_fill
+        cell.font = header_font
+        cell.alignment = center_align
+
+    # Fetch all evaluations for breakdown
+    sb = get_supabase_client()
+    raw_evals = []
+    if sb and target_round:
+        try:
+            res = sb.table("evaluations").select("*, profiles(name, email, role), teams(team_name, college)").eq("round_id", target_round["id"]).execute()
+            raw_evals = res.data or []
+        except Exception:
+            pass
+
+    if not raw_evals:
+        from app.api.evaluations import DEMO_EVALUATIONS
+        raw_evals = list(DEMO_EVALUATIONS.values())
+
+    for ev in raw_evals:
+        t_id = ev.get("team_id")
+        team_match = next((t for t in leaderboard if t["team_id"] == t_id), {})
+        prof = ev.get("profiles") or {}
+        j_name = prof.get("name") or "Dr. Sarah Verma"
+        j_role = prof.get("role") or "judge"
+
+        row = [
+            t_id,
+            team_match.get("team_name", ev.get("teams", {}).get("team_name", f"Team {t_id}")),
+            team_match.get("college", "Geeta University"),
+            j_name,
+            j_role.upper(),
+            ev.get("total", 0.0),
+            "LOCKED / SUBMITTED" if ev.get("locked") else "DRAFT",
+            ev.get("remarks", "")
+        ]
+        sc = ev.get("scores", {})
+        for c in criteria:
+            row.append(sc.get(c.get("id")) or sc.get(c.get("name"), 0.0))
+        ws_jw.append(row)
+
+    for col in ws_jw.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = col[0].column_letter
+        ws_jw.column_dimensions[col_letter].width = min(max(max_len + 3, 14), 45)
+
+    # ==========================================
+    # SHEET 3: Round Summary & Audit Information
+    # ==========================================
+    ws_sum = wb.create_sheet(title="Round Summary")
+    summary_data = [
+        ["NexHack 2.0 Hackathon — Official Results Summary"],
+        [""],
+        ["Event Name", "NexHack 2.0 (Geeta University 24-Hour Hackathon)"],
+        ["Round Evaluated", f"Round {round_number}: {target_round.get('name', 'Evaluation Phase')}"],
+        ["Round Type", target_round.get("type", "scoring").upper()],
+        ["Total Participating Teams", len(leaderboard)],
+        ["Promotion Cutoff", f"Top {target_round.get('promote_count', 20)} Advance, Remaining Eliminated"],
+        ["Tie-Break Order", "Technical Execution (30) > Innovation & Creativity (25) > Impact & Relevance (15)"],
+        ["Export Timestamp", "Official System Export Generated via NexVal Portal"],
+    ]
+
+    for r in summary_data:
+        ws_sum.append(r)
+
+    ws_sum.cell(row=1, column=1).font = Font(name="Calibri", size=14, bold=True, color="0F172A")
+    for r_idx in range(3, len(summary_data) + 1):
+        ws_sum.cell(row=r_idx, column=1).font = bold_font
+        ws_sum.cell(row=r_idx, column=2).font = regular_font
+
+    ws_sum.column_dimensions["A"].width = 30
+    ws_sum.column_dimensions["B"].width = 50
+
+    # Save to memory stream
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"NexHack_Round_{round_number}_Results.xlsx"
+    headers = {
+        "Content-Disposition": f"attachment; filename={filename}"
+    }
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers
+    )
+
 
 
 @router.get("/leaderboard")

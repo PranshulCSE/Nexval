@@ -75,11 +75,29 @@ async def save_draft(payload: SaveDraftPayload):
     """
     Auto-save draft evaluation (debounced).
     Computes total server-side, validates bounds, saves with locked=false.
+    Mentors can only evaluate in remarks-only rounds.
     """
     server_time = datetime.now(timezone.utc).isoformat()
     sb = get_supabase_client()
 
+    # Rule 5: Mentor role can only do remarks-only rounds
     if sb:
+        try:
+            p_res = sb.table("profiles").select("role").eq("id", payload.judge_id).single().execute()
+            r_res = sb.table("rounds").select("type, number").eq("id", payload.round_id).single().execute()
+            if p_res.data and r_res.data:
+                if p_res.data.get("role") == "mentor" and r_res.data.get("type") != "remarks":
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Mentors are only permitted to evaluate in guidance/remarks rounds. Scoring rounds are reserved for official judges."
+                    )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    if sb:
+
         try:
             # Let the database trigger compute total and validate rules
             eval_record = {
@@ -135,11 +153,29 @@ async def submit_and_lock(payload: SubmitEvaluationPayload):
     """
     Final submit: Locks the evaluation so no further edits can occur.
     Writes audit log entry.
+    Mentors can only evaluate in remarks-only rounds.
     """
     server_time = datetime.now(timezone.utc).isoformat()
     sb = get_supabase_client()
 
+    # Rule 5: Mentor role check
     if sb:
+        try:
+            p_res = sb.table("profiles").select("role").eq("id", payload.judge_id).single().execute()
+            r_res = sb.table("rounds").select("type, number").eq("id", payload.round_id).single().execute()
+            if p_res.data and r_res.data:
+                if p_res.data.get("role") == "mentor" and r_res.data.get("type") != "remarks":
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Mentors are only permitted to evaluate in guidance/remarks rounds. Scoring rounds are reserved for official judges."
+                    )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    if sb:
+
         try:
             eval_record = {
                 "round_id": payload.round_id,
