@@ -7,7 +7,8 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { ArrowLeft, CheckCircle2, Lock, Save, Clock, AlertTriangle, School, Award, Sparkles, MessageSquare } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Lock, Save, Clock, AlertTriangle, School, Award, Sparkles, MessageSquare, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { useOfflineSync, saveToOfflineQueue } from '../lib/offlineQueue';
 
 interface RubricCriterion {
   id: string;
@@ -43,6 +44,7 @@ export const JudgeScoringPage: React.FC = () => {
   const { profile, signOut } = useAuth();
   const { success, error } = useToast();
   const navigate = useNavigate();
+  const { isOnline, syncStatus, pendingCount } = useOfflineSync();
 
   const [team, setTeam] = useState<TeamData | null>(null);
   const [round, setRound] = useState<any>(null);
@@ -146,7 +148,7 @@ export const JudgeScoringPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // Debounced Auto-save draft
+  // Debounced Auto-save draft (with IndexedDB offline queue support)
   const triggerAutoSave = useCallback(
     (currentScores: Record<string, number>, currentRemarks: string) => {
       if (isLocked || isFirstLoadRef.current) return;
@@ -158,20 +160,36 @@ export const JudgeScoringPage: React.FC = () => {
       setSaveStatus('saving');
 
       debounceTimerRef.current = setTimeout(async () => {
+        const itemKey = `${roundId}_${teamId}_${profile?.id}`;
+        const payload = {
+          key: itemKey,
+          round_id: roundId!,
+          judge_id: profile?.id!,
+          team_id: teamId!,
+          scores: currentScores,
+          remarks: currentRemarks,
+          timestamp: Date.now(),
+        };
+
+        if (!navigator.onLine) {
+          await saveToOfflineQueue(payload);
+          setSaveStatus('saved');
+          setLastSavedTime(new Date().toLocaleTimeString());
+          return;
+        }
+
         try {
           const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-          const payload = {
-            round_id: roundId,
-            judge_id: profile?.id,
-            team_id: teamId,
-            scores: currentScores,
-            remarks: currentRemarks,
-          };
-
           const res = await fetch(`${backendUrl}/api/v1/evaluations/draft`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              round_id: roundId,
+              judge_id: profile?.id,
+              team_id: teamId,
+              scores: currentScores,
+              remarks: currentRemarks,
+            }),
           });
 
           if (res.ok) {
@@ -180,10 +198,13 @@ export const JudgeScoringPage: React.FC = () => {
             setLastSavedTime(new Date().toLocaleTimeString());
             if (data.evaluation?.id) setEvaluationId(data.evaluation.id);
           } else {
-            setSaveStatus('error');
+            await saveToOfflineQueue(payload);
+            setSaveStatus('saved');
+            setLastSavedTime(new Date().toLocaleTimeString());
           }
         } catch (e) {
-          // Local storage fallback
+          // If network fails, safely save into IndexedDB offline queue
+          await saveToOfflineQueue(payload);
           setSaveStatus('saved');
           setLastSavedTime(new Date().toLocaleTimeString());
         }
@@ -216,20 +237,44 @@ export const JudgeScoringPage: React.FC = () => {
     if (!roundId || !teamId || !profile) return;
     setIsSubmitting(true);
 
+    const itemKey = `${roundId}_${teamId}_${profile.id}`;
+    const payload = {
+      key: itemKey,
+      round_id: roundId,
+      judge_id: profile.id,
+      team_id: teamId,
+      scores,
+      remarks,
+      is_locked: true,
+      timestamp: Date.now(),
+    };
+
+    // If offline, save into IndexedDB queue with locked flag
+    if (!navigator.onLine) {
+      await saveToOfflineQueue(payload);
+      setIsLocked(true);
+      setIsSubmitModalOpen(false);
+      success(
+        'Saved to Offline Queue',
+        'Device is offline. Your final evaluation was securely saved locally and will auto-submit once connection is restored.'
+      );
+      navigate('/judge');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-      const payload = {
-        round_id: roundId,
-        judge_id: profile.id,
-        team_id: teamId,
-        scores,
-        remarks,
-      };
-
       const res = await fetch(`${backendUrl}/api/v1/evaluations/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          round_id: roundId,
+          judge_id: profile.id,
+          team_id: teamId,
+          scores,
+          remarks,
+        }),
       });
 
       if (!res.ok) {
@@ -242,7 +287,15 @@ export const JudgeScoringPage: React.FC = () => {
       success('Evaluation Locked', 'Your evaluation has been recorded and submitted to the scoring engine.');
       navigate('/judge');
     } catch (err: any) {
-      error('Submission Error', err.message || 'Could not submit evaluation.');
+      // If network dropped during submit, queue offline
+      await saveToOfflineQueue(payload);
+      setIsLocked(true);
+      setIsSubmitModalOpen(false);
+      success(
+        'Saved to Offline Queue',
+        'Network error during submission. Your evaluation is stored in the offline queue and will sync automatically.'
+      );
+      navigate('/judge');
     } finally {
       setIsSubmitting(false);
     }
@@ -260,7 +313,13 @@ export const JudgeScoringPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Layout user={profile} navItems={navItems} onSignOut={signOut}>
+      <Layout
+        user={profile}
+        navItems={navItems}
+        onSignOut={signOut}
+        syncStatus={syncStatus}
+        pendingSyncCount={pendingCount}
+      >
         <div className="min-h-[50vh] flex flex-col items-center justify-center">
           <div className="w-8 h-8 border-2 border-slate-300 border-t-[#0F172A] rounded-full animate-spin" />
           <p className="text-xs text-slate-500 mt-3 font-medium">Loading evaluation rubric...</p>
@@ -270,7 +329,14 @@ export const JudgeScoringPage: React.FC = () => {
   }
 
   return (
-    <Layout user={profile} navItems={navItems} onSignOut={signOut} maxWidth="5xl">
+    <Layout
+      user={profile}
+      navItems={navItems}
+      onSignOut={signOut}
+      maxWidth="5xl"
+      syncStatus={syncStatus}
+      pendingSyncCount={pendingCount}
+    >
       {/* Top back button and lock banner */}
       <div className="mb-4 flex items-center justify-between">
         <Link
@@ -281,18 +347,22 @@ export const JudgeScoringPage: React.FC = () => {
           Back to Assigned Teams
         </Link>
 
-        {/* Auto-save indicator */}
+        {/* Auto-save & Sync indicator */}
         <div className="flex items-center gap-2">
-          {saveStatus === 'saving' && (
-            <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-              Saving draft...
+          {!isOnline ? (
+            <span className="text-[11px] text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+              <CloudOff className="w-3.5 h-3.5 text-slate-500" />
+              Offline &bull; Saved locally
             </span>
-          )}
-          {saveStatus === 'saved' && (
-            <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Draft saved {lastSavedTime ? `at ${lastSavedTime}` : ''}
+          ) : saveStatus === 'saving' || syncStatus === 'syncing' ? (
+            <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600" />
+              Syncing...
+            </span>
+          ) : (
+            <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1.5 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              {lastSavedTime ? `Saved at ${lastSavedTime}` : 'All changes saved'}
             </span>
           )}
           {isLocked && (

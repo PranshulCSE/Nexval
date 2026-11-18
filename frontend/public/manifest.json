@@ -1,0 +1,22 @@
+{
+  "name": "NexHack 2.0 Judging Portal",
+  "short_name": "NexHack Judge",
+  "description": "Official mobile-first judging portal for NexHack 2.0 Hackathon at Geeta University",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F5F9",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "/nexhack-logo.webp",
+      "sizes": "192x192",
+      "type": "image/webp"
+    },
+    {
+      "src": "/nexhack-logo.webp",
+      "sizes": "512x512",
+      "type": "image/webp"
+    }
+  ]
+}

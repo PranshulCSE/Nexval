@@ -29,3 +29,17 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     </QueryClientProvider>
   </React.StrictMode>
 );
+
+// Register PWA service worker
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((registration) => {
+        console.log('NexHack PWA ServiceWorker registered with scope:', registration.scope);
+      })
+      .catch((error) => {
+        console.warn('NexHack ServiceWorker registration failed:', error);
+      });
+  });
+}

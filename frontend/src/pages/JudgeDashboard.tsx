@@ -9,6 +9,7 @@ import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Users, Clock, CheckCircle2, FileEdit, AlertCircle, Search, ArrowRight, ShieldCheck, Sparkles, School, Printer } from 'lucide-react';
+import { useOfflineSync } from '../lib/offlineQueue';
 
 interface AssignedTeamItem {
   id: string;
@@ -29,6 +30,7 @@ interface AssignedTeamItem {
 export const JudgeDashboard: React.FC = () => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { syncStatus, pendingCount } = useOfflineSync();
 
   const [assignedTeams, setAssignedTeams] = useState<AssignedTeamItem[]>([]);
   const [activeRound, setActiveRound] = useState<any>(null);
@@ -175,6 +177,8 @@ export const JudgeDashboard: React.FC = () => {
       user={profile ? { name: profile.name, email: profile.email, role: profile.role } : null}
       navItems={navItems}
       onSignOut={signOut}
+      syncStatus={syncStatus}
+      pendingSyncCount={pendingCount}
     >
       <PageHeader
         title="Judge Evaluation Hub"
