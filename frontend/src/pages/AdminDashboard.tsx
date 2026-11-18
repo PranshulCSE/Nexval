@@ -95,6 +95,7 @@ export const AdminDashboard: React.FC = () => {
     { label: 'Rounds', href: '/admin/rounds' },
     { label: 'Assignments', href: '/admin/assignments' },
     { label: 'Leaderboard', href: '/admin/leaderboard' },
+    { label: 'Analytics', href: '/admin/analytics' },
   ];
 
 

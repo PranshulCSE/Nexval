@@ -246,6 +246,8 @@ export const AssignmentsPage: React.FC = () => {
     { label: 'Judges', href: '/admin/judges' },
     { label: 'Rounds', href: '/admin/rounds' },
     { label: 'Assignments', href: '/admin/assignments' },
+    { label: 'Leaderboard', href: '/admin/leaderboard' },
+    { label: 'Analytics', href: '/admin/analytics' },
   ];
 
   const assignmentColumns: Column<TeamAssignmentRow>[] = [

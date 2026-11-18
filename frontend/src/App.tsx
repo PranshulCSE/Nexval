@@ -8,6 +8,7 @@ import { JudgesPage } from './pages/JudgesPage';
 import { RoundsPage } from './pages/RoundsPage';
 import { AssignmentsPage } from './pages/AssignmentsPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { JudgeDashboard } from './pages/JudgeDashboard';
 import { PublicResultsPage } from './pages/PublicResultsPage';
 import { TeamPortalPage } from './pages/TeamPortalPage';
@@ -99,6 +100,14 @@ export const App: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <LeaderboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AnalyticsPage />
           </ProtectedRoute>
         }
       />

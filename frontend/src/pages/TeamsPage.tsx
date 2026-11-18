@@ -247,6 +247,8 @@ export const TeamsPage: React.FC = () => {
     { label: 'Teams', href: '/admin/teams' },
     { label: 'Judges', href: '/admin/judges' },
     { label: 'Rounds', href: '/admin/rounds' },
+    { label: 'Leaderboard', href: '/admin/leaderboard' },
+    { label: 'Analytics', href: '/admin/analytics' },
   ];
 
   const columns: Column<TeamRecord>[] = [

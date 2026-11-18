@@ -10,7 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { PillTabs } from '../components/ui/PillTabs';
-import { Trophy, Award, Radio, Users, CheckCircle2, AlertTriangle, Clock, Search, School, ArrowRight, Sparkles, AlertCircle, Download, Tv } from 'lucide-react';
+import { Trophy, Award, Radio, Users, CheckCircle2, AlertTriangle, Clock, Search, School, ArrowRight, Sparkles, AlertCircle, Download, Tv, Scale } from 'lucide-react';
 
 
 interface LeaderboardItem {
@@ -46,6 +46,7 @@ export const LeaderboardPage: React.FC = () => {
   const { success, error } = useToast();
 
   const [selectedRound, setSelectedRound] = useState<number>(2);
+  const [useZScore, setUseZScore] = useState<boolean>(() => new URLSearchParams(window.location.search).get('z_score') === 'true');
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [judgeProgress, setJudgeProgress] = useState<JudgeProgressItem[]>([]);
   const [overallProgress, setOverallProgress] = useState<{ percentage: number; completed: number; total: number }>({
@@ -93,7 +94,7 @@ export const LeaderboardPage: React.FC = () => {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
       
-      const lbRes = await fetch(`${backendUrl}/api/v1/results/leaderboard?round_number=${selectedRound}`);
+      const lbRes = await fetch(`${backendUrl}/api/v1/results/leaderboard?round_number=${selectedRound}&use_z_score=${useZScore}`);
       if (lbRes.ok) {
         const lbData = await lbRes.json();
         setLeaderboard(lbData.leaderboard || []);
@@ -116,7 +117,7 @@ export const LeaderboardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedRound]);
+  }, [selectedRound, useZScore]);
 
   useEffect(() => {
     fetchResults();
@@ -210,6 +211,7 @@ export const LeaderboardPage: React.FC = () => {
     { label: 'Rounds', href: '/admin/rounds' },
     { label: 'Assignments', href: '/admin/assignments' },
     { label: 'Leaderboard', href: '/admin/leaderboard' },
+    { label: 'Analytics', href: '/admin/analytics' },
   ];
 
   const columns: Column<LeaderboardItem>[] = [
@@ -308,13 +310,16 @@ export const LeaderboardPage: React.FC = () => {
       },
     },
     {
-      header: 'Average Total',
+      header: useZScore ? 'Average Total (Z-Normalized)' : 'Average Total',
       cell: (item) => (
         <div className="text-right pr-4">
           <span className="text-base font-extrabold font-mono text-slate-900">
             {item.avg_total.toFixed(1)}
           </span>
           <span className="text-xs font-mono text-slate-400"> / 100</span>
+          {useZScore && (
+            <span className="block text-[9px] font-mono text-blue-600 font-semibold">Z-Calibrated</span>
+          )}
         </div>
       ),
       className: 'text-right',
@@ -470,19 +475,42 @@ export const LeaderboardPage: React.FC = () => {
         <span className="text-[11px] text-slate-400 font-mono">Scores averaged across assigned jury</span>
       </Card>
 
-      {/* Search Bar */}
+      {/* Search and Z-Score Normalization Bar */}
       <Card padding="sm" className="mb-4">
-        <div className="relative max-w-sm">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-4 h-4" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search teams in leaderboard..."
+              className="w-full pl-10 pr-3.5 py-1.5 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none"
+            />
           </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search teams in leaderboard..."
-            className="w-full pl-10 pr-3.5 py-1.5 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:bg-white focus:outline-none"
-          />
+
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setUseZScore(!useZScore)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                useZScore
+                  ? 'bg-[#0F172A] text-white border-slate-900 shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+              }`}
+              title="Standardizes judge scoring variances (z-score) so harsh vs lenient judges don't skew rankings"
+            >
+              <Scale className="w-3.5 h-3.5" />
+              Z-Score Normalization: {useZScore ? 'ACTIVE' : 'OFF'}
+            </button>
+            {useZScore && (
+              <Badge variant="blue" className="text-[10px] hidden md:inline-flex">
+                Standardized (μ=80, σ=10)
+              </Badge>
+            )}
+          </div>
         </div>
       </Card>
 
