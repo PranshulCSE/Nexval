@@ -10,6 +10,8 @@ from app.core.config import settings
 from app.core.supabase import get_supabase_client
 from app.api.teams import DEMO_TEAMS
 from app.api.rounds import DEMO_ROUNDS
+from app.services.github_checker import check_github_repository
+from app.services.similarity_checker import check_submission_similarity
 
 router = APIRouter(prefix="/submissions", tags=["Project Submissions"])
 
@@ -38,11 +40,74 @@ DEMO_SUBMISSIONS: Dict[str, Dict[str, Any]] = {
             "post_start_percentage": 100.0,
             "is_fork": False,
             "stars": 12,
+            "flags": []
         },
         "similarity_flags": [],
         "is_locked": False,
         "submitted_at": "2026-11-17T20:00:00Z",
         "updated_at": "2026-11-17T20:00:00Z",
+    },
+    "NEX-02": {
+        "id": "sub-002",
+        "team_id": "NEX-02",
+        "round_id": "22222222-2222-2222-2222-222222222222",
+        "github_url": "https://github.com/nexhack-teams/binary-beasts-web3",
+        "ppt_pdf_url": "https://storage.googleapis.com/nexhack-submissions/NEX-02-deck.pdf",
+        "demo_video_url": "https://youtu.be/dQw4w9WgXcQ",
+        "live_link": "https://binary-beasts.vercel.app",
+        "description": "Decentralized privacy-preserving identity verification protocol using zero-knowledge proofs.",
+        "readme_content": "# Binary Beasts Web3 Protocol\nBuilt for NexHack 2.0 Hackathon.",
+        "readme_hash": "f6e7d8c9b0",
+        "github_metadata": {
+            "created_at": "2026-11-17T09:45:00Z",
+            "first_commit": "2026-11-17T10:15:00Z",
+            "total_commits": 24,
+            "post_start_commits": 24,
+            "post_start_percentage": 100.0,
+            "is_fork": False,
+            "stars": 8,
+            "flags": []
+        },
+        "similarity_flags": [],
+        "is_locked": False,
+        "submitted_at": "2026-11-17T21:15:00Z",
+        "updated_at": "2026-11-17T21:15:00Z",
+    },
+    "NEX-03": {
+        "id": "sub-003",
+        "team_id": "NEX-03",
+        "round_id": "22222222-2222-2222-2222-222222222222",
+        "github_url": "https://github.com/legacy-projects/iot-sensor-monitor",
+        "ppt_pdf_url": "https://storage.googleapis.com/nexhack-submissions/NEX-03-deck.pdf",
+        "demo_video_url": "https://drive.google.com/file/d/1a2b3c4d5e/view",
+        "live_link": "https://iot-hawks.netlify.app",
+        "description": "Smart agriculture IoT sensor grid for micro-climate tracking and automated irrigation.",
+        "readme_content": "# IoT Sensor Monitor\nSmart agriculture IoT platform.",
+        "readme_hash": "1122334455",
+        "github_metadata": {
+            "created_at": "2025-08-14T11:00:00Z",
+            "first_commit": "2025-08-14T11:30:00Z",
+            "total_commits": 42,
+            "post_start_commits": 6,
+            "post_start_percentage": 14.3,
+            "is_fork": True,
+            "stars": 3,
+            "flags": [
+                "⚠️ Forked Repository: This repository was forked from an upstream codebase.",
+                "⚠️ Pre-Hackathon Creation: Repo was created on 14 Aug 2025 (460 days before event start).",
+                "⚠️ Pre-Existing Commits: Only 14% of commits occurred after hackathon kickoff. Verify live contributions during Q&A."
+            ]
+        },
+        "similarity_flags": [
+            {
+                "type": "fork_detection",
+                "severity": "medium",
+                "message": "⚠️ Fork Detected: Upstream repo detected. Jury should cross-verify commit diff during interview."
+            }
+        ],
+        "is_locked": False,
+        "submitted_at": "2026-11-17T21:45:00Z",
+        "updated_at": "2026-11-17T21:45:00Z",
     }
 }
 
@@ -354,6 +419,21 @@ async def create_or_update_submission(payload: SubmissionPayload):
     if payload.readme_content:
         readme_hash = hashlib.sha256(payload.readme_content.encode("utf-8")).hexdigest()[:16]
 
+    # Rule 4: Run GitHub inspection (repo created date, first commit, % commits post-start, fork)
+    gh_metadata = await check_github_repository(payload.github_url)
+
+    # Rule 5: Run similarity check across all submitted projects
+    sim_flags = check_submission_similarity(
+        current_team_id=clean_id,
+        current_submission={
+            "github_url": payload.github_url,
+            "description": payload.description,
+            "readme_content": payload.readme_content,
+            "readme_hash": readme_hash,
+        },
+        all_submissions=DEMO_SUBMISSIONS,
+    )
+
     submission_record = {
         "id": f"sub-{clean_id.lower()}",
         "team_id": clean_id,
@@ -365,8 +445,8 @@ async def create_or_update_submission(payload: SubmissionPayload):
         "description": payload.description.strip(),
         "readme_content": payload.readme_content,
         "readme_hash": readme_hash,
-        "github_metadata": {},
-        "similarity_flags": [],
+        "github_metadata": gh_metadata,
+        "similarity_flags": sim_flags,
         "is_locked": False,
         "submitted_at": now_iso,
         "updated_at": now_iso,

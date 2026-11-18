@@ -41,19 +41,26 @@ class UnlockPayload(BaseModel):
 @router.get("/{round_id}/{team_id}")
 async def get_evaluation(round_id: str, team_id: str, judge_id: str):
     """
-    Get evaluation and criteria for scoring screen.
+    Get evaluation, criteria, and project submission deliverables for judge scoring screen.
     """
+    from app.api.submissions import DEMO_SUBMISSIONS
+    sub_data = DEMO_SUBMISSIONS.get(team_id)
+
     sb = get_supabase_client()
     if sb:
         try:
             e_res = sb.table("evaluations").select("*").eq("round_id", round_id).eq("judge_id", judge_id).eq("team_id", team_id).maybe_single().execute()
             r_res = sb.table("rounds").select("*").eq("id", round_id).single().execute()
             c_res = sb.table("rubric_criteria").select("*").eq("round_id", round_id).order("sort_order").execute()
+            s_res = sb.table("submissions").select("*").eq("team_id", team_id).maybe_single().execute()
+            if s_res.data:
+                sub_data = s_res.data
 
             return {
                 "evaluation": e_res.data,
                 "round": r_res.data,
-                "criteria": c_res.data or []
+                "criteria": c_res.data or [],
+                "submission": sub_data,
             }
         except Exception:
             pass
@@ -66,7 +73,8 @@ async def get_evaluation(round_id: str, team_id: str, judge_id: str):
     return {
         "evaluation": DEMO_EVALUATIONS.get(key),
         "round": round_obj,
-        "criteria": round_obj.get("criteria", [])
+        "criteria": round_obj.get("criteria", []),
+        "submission": sub_data,
     }
 
 

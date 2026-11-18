@@ -7,7 +7,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { ArrowLeft, CheckCircle2, Lock, Save, Clock, AlertTriangle, School, Award, Sparkles, MessageSquare, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Lock, Save, Clock, AlertTriangle, School, Award, Sparkles, MessageSquare, Cloud, CloudOff, RefreshCw, Github, Video, FileText, Globe, ExternalLink } from 'lucide-react';
 import { useOfflineSync, saveToOfflineQueue } from '../lib/offlineQueue';
 
 interface RubricCriterion {
@@ -47,6 +47,7 @@ export const JudgeScoringPage: React.FC = () => {
   const { isOnline, syncStatus, pendingCount } = useOfflineSync();
 
   const [team, setTeam] = useState<TeamData | null>(null);
+  const [submission, setSubmission] = useState<any>(null);
   const [round, setRound] = useState<any>(null);
   const [criteria, setCriteria] = useState<RubricCriterion[]>([]);
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -84,6 +85,10 @@ export const JudgeScoringPage: React.FC = () => {
         const data = await res.json();
         setRound(data.round);
         setCriteria(data.criteria || []);
+
+        if (data.submission) {
+          setSubmission(data.submission);
+        }
 
         if (data.evaluation) {
           const ev: EvaluationRecord = data.evaluation;
@@ -126,6 +131,15 @@ export const JudgeScoringPage: React.FC = () => {
         });
       }
     }
+
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const sRes = await fetch(`${backendUrl}/api/v1/submissions/${teamId}`);
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        setSubmission(sData);
+      }
+    } catch {}
 
     // Default criteria for Round 2/3 if empty
     if (criteria.length === 0 && round?.type !== 'remarks') {
@@ -428,6 +442,126 @@ export const JudgeScoringPage: React.FC = () => {
           )}
         </div>
       </Card>
+
+      {/* Project Submission Deliverables & Verification Card */}
+      {submission && (
+        <Card padding="md" className="mb-6 bg-white border-slate-200 shadow-subtle space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-slate-700" /> Project Deliverables & Verification
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Artifacts submitted by team &bull; Inspected via GitHub API & Similarity Engine
+              </p>
+            </div>
+
+            {submission.github_metadata?.post_start_percentage !== undefined && (
+              <Badge variant={submission.github_metadata.post_start_percentage >= 80 ? 'green' : 'yellow'} className="text-[10px]">
+                {submission.github_metadata.post_start_percentage}% Commits Post-Kickoff
+              </Badge>
+            )}
+          </div>
+
+          {/* Deliverables Link Badges */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+            {submission.github_url && (
+              <a
+                href={submission.github_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-xs font-semibold text-slate-900 group"
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  <Github className="w-4 h-4 text-slate-900 shrink-0" />
+                  Code Repository
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700" />
+              </a>
+            )}
+
+            {submission.demo_video_url && (
+              <a
+                href={submission.demo_video_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-xs font-semibold text-slate-900 group"
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  <Video className="w-4 h-4 text-red-600 shrink-0" />
+                  Demo Video
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700" />
+              </a>
+            )}
+
+            {submission.ppt_pdf_url && (
+              <a
+                href={submission.ppt_pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-xs font-semibold text-slate-900 group"
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                  Pitch Deck (PDF)
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700" />
+              </a>
+            )}
+
+            {submission.live_link && (
+              <a
+                href={submission.live_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 hover:border-slate-300 transition-all text-xs font-semibold text-slate-900 group"
+              >
+                <span className="flex items-center gap-1.5 truncate">
+                  <Globe className="w-4 h-4 text-emerald-600 shrink-0" />
+                  Live Demo Link
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700" />
+              </a>
+            )}
+          </div>
+
+          {/* Project Summary */}
+          {submission.description && (
+            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-700 leading-relaxed">
+              <strong className="text-slate-900 block mb-0.5 font-bold">Project Overview:</strong>
+              {submission.description}
+            </div>
+          )}
+
+          {/* Automated Verification & Warning Flags (Never auto-reject!) */}
+          {((submission.github_metadata?.flags && submission.github_metadata.flags.length > 0) ||
+            (submission.similarity_flags && submission.similarity_flags.length > 0)) ? (
+            <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Automated Integrity Flags (For Human Jury Review)</span>
+              </div>
+              <ul className="space-y-1 text-amber-800 pl-5 list-disc text-[11px] leading-relaxed">
+                {(submission.github_metadata?.flags || []).map((f: string, i: number) => (
+                  <li key={`gh-${i}`}>{f}</li>
+                ))}
+                {(submission.similarity_flags || []).map((s: any, i: number) => (
+                  <li key={`sim-${i}`}>{typeof s === 'string' ? s : s.message}</li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-amber-700 font-medium pt-1 border-t border-amber-200/60">
+                * Note: Warning flags are strictly advisory. Inquire during live pitch to verify codebase originality. Never auto-disqualify.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50/60 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Originality Checked: Fresh repository, no duplication detected across submitted projects.</span>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Round 1 Remarks Mode Notice */}
       {isRemarksOnly && (
