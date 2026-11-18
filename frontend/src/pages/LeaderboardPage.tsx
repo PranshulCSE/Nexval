@@ -10,7 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { PillTabs } from '../components/ui/PillTabs';
-import { Trophy, Award, Radio, Users, CheckCircle2, AlertTriangle, Clock, Search, School, ArrowRight, Sparkles, AlertCircle, Download } from 'lucide-react';
+import { Trophy, Award, Radio, Users, CheckCircle2, AlertTriangle, Clock, Search, School, ArrowRight, Sparkles, AlertCircle, Download, Tv } from 'lucide-react';
 
 
 interface LeaderboardItem {
@@ -345,6 +345,16 @@ export const LeaderboardPage: React.FC = () => {
               leftIcon={<Download className="w-3.5 h-3.5" />}
             >
               Export Excel Report
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open('/results', '_blank')}
+              leftIcon={<Tv className="w-3.5 h-3.5 text-slate-600" />}
+              className="bg-white border-slate-200"
+            >
+              Projector Screen
             </Button>
 
             {selectedRound === 1 && (

@@ -9,7 +9,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
 import { TeamUploadModal } from '../components/teams/TeamUploadModal';
-import { Search, Plus, Filter, Users, School, Layers, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Filter, Users, School, Layers, CheckCircle2, XCircle, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { TeamFeedbackModal } from '../components/TeamFeedbackModal';
 
 export interface TeamRecord {
   id: string;
@@ -136,6 +137,7 @@ export const TeamsPage: React.FC = () => {
   const [roundFilter, setRoundFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [selectedFeedbackTeamId, setSelectedFeedbackTeamId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const pageSize = 8;
@@ -315,14 +317,25 @@ export const TeamsPage: React.FC = () => {
     {
       header: 'Action',
       cell: (t) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => toggleTeamStatus(t)}
-          className="text-xs py-1"
-        >
-          {t.status === 'active' ? 'Eliminate' : 'Reactivate'}
-        </Button>
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedFeedbackTeamId(t.team_id)}
+            leftIcon={<MessageSquare className="w-3.5 h-3.5 text-slate-500" />}
+            className="text-xs py-1"
+          >
+            Feedback
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toggleTeamStatus(t)}
+            className="text-xs py-1"
+          >
+            {t.status === 'active' ? 'Eliminate' : 'Reactivate'}
+          </Button>
+        </div>
       ),
       className: 'text-right',
     },
@@ -433,6 +446,14 @@ export const TeamsPage: React.FC = () => {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         onSuccess={fetchTeams}
+      />
+
+      {/* Team Feedback Modal (Round 1 Guidance) */}
+      <TeamFeedbackModal
+        isOpen={Boolean(selectedFeedbackTeamId)}
+        onClose={() => setSelectedFeedbackTeamId(null)}
+        teamId={selectedFeedbackTeamId}
+        isAdmin={profile?.role === 'admin'}
       />
     </Layout>
   );

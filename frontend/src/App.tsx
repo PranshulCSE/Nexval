@@ -9,7 +9,7 @@ import { RoundsPage } from './pages/RoundsPage';
 import { AssignmentsPage } from './pages/AssignmentsPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { JudgeDashboard } from './pages/JudgeDashboard';
-
+import { PublicResultsPage } from './pages/PublicResultsPage';
 import { JudgeScoringPage } from './pages/JudgeScoringPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -124,6 +124,10 @@ export const App: React.FC = () => {
         }
       />
 
+
+      {/* Public Results Presentation Screen */}
+      <Route path="/results" element={<PublicResultsPage />} />
+      <Route path="/public-results" element={<PublicResultsPage />} />
 
       {/* Catch-all 404 */}
       <Route path="*" element={<NotFoundPage />} />

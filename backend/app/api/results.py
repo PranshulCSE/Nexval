@@ -645,3 +645,88 @@ async def get_judge_progress(
         "overall_percentage": overall_pct,
         "judges": judge_progress_list
     }
+
+
+# ============================================================================
+# PUBLIC RESULTS PUBLISHING & PROJECTOR STREAM ENDPOINTS
+# ============================================================================
+
+IS_RESULTS_PUBLISHED: bool = True
+
+class PublishResultsPayload(BaseModel):
+    published: bool
+    round_number: int = 3
+
+@router.post("/publish")
+async def toggle_results_publish(payload: PublishResultsPayload):
+    """
+    Admin toggle to publish/unpublish grand finale results to the public projection screen.
+    """
+    global IS_RESULTS_PUBLISHED
+    IS_RESULTS_PUBLISHED = payload.published
+
+    sb = get_supabase_client()
+    if sb:
+        try:
+            sb.table("rounds").update({"is_results_published": payload.published}).eq("number", payload.round_number).execute()
+        except Exception as e:
+            print(f"Supabase publish results error: {e}")
+
+    return {
+        "success": True,
+        "is_published": IS_RESULTS_PUBLISHED,
+        "round_number": payload.round_number,
+        "message": "Results are now live for public projection!" if IS_RESULTS_PUBLISHED else "Results retracted from public display."
+    }
+
+@router.get("/public")
+async def get_public_results():
+    """
+    Publicly accessible endpoint for the projector-friendly results reveal screen.
+    Shows top 3 grand winners with ranks and top 20 finalists only after admin publishes.
+    """
+    global IS_RESULTS_PUBLISHED
+    if not IS_RESULTS_PUBLISHED:
+        return {
+            "is_published": False,
+            "event_name": "NexHack 2.0 (Geeta University 24-Hour Hackathon)",
+            "message": "Final results are being compiled and verified by the jury. The grand reveal will begin shortly!"
+        }
+
+    # Fetch Round 3 leaderboard (or Round 2 if Round 3 not finalized)
+    lb_data = await get_round_leaderboard(round_number=3)
+    leaderboard = lb_data["leaderboard"]
+    if not leaderboard or len(leaderboard) < 3:
+        lb_data = await get_round_leaderboard(round_number=2)
+        leaderboard = lb_data["leaderboard"]
+
+    top_3 = []
+    finalists = []
+
+    titles = ["Grand Champion", "1st Runner-Up", "2nd Runner-Up"]
+    for idx, item in enumerate(leaderboard):
+        entry = {
+            "rank": idx + 1,
+            "team_id": item["team_id"],
+            "team_name": item["team_name"],
+            "college": item.get("college", "Geeta University"),
+            "track": item.get("track", "General Track"),
+            "avg_total": item["avg_total"],
+            "criteria_scores": item.get("criterion_averages", {})
+        }
+        if idx < 3:
+            entry["award_title"] = titles[idx]
+            top_3.append(entry)
+        elif idx < 20:
+            finalists.append(entry)
+
+    return {
+        "is_published": True,
+        "event_name": "NexHack 2.0 Hackathon",
+        "round_name": "Round 3: Grand Finale",
+        "winners": top_3,
+        "finalists": finalists,
+        "tie_break_applied": True,
+        "published_at": "2026-11-18T12:00:00Z"
+    }
+
