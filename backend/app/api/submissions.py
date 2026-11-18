@@ -1,8 +1,9 @@
+import os
 import re
 import hashlib
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status, UploadFile, File, Form
 from pydantic import BaseModel, HttpUrl, validator
 
 from app.core.config import settings
@@ -11,6 +12,10 @@ from app.api.teams import DEMO_TEAMS
 from app.api.rounds import DEMO_ROUNDS
 
 router = APIRouter(prefix="/submissions", tags=["Project Submissions"])
+
+# Storage limits
+MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20MB
+ALLOWED_EXTENSIONS = {".pdf", ".ppt", ".pptx"}
 
 # In-memory storage for demo and fallback mode
 DEMO_SUBMISSIONS: Dict[str, Dict[str, Any]] = {
@@ -194,6 +199,139 @@ async def get_team_submission(team_id: str):
         return DEMO_SUBMISSIONS[clean_id]
 
     raise HTTPException(status_code=404, detail="No submission found for this team")
+
+class UploadUrlPayload(BaseModel):
+    team_id: str
+    filename: str
+    content_type: str
+    file_size: int
+
+@router.post("/upload-url")
+async def get_signed_upload_url(payload: UploadUrlPayload):
+    """
+    Generate signed upload URL for pitch deck (PDF/PPT up to 20MB).
+    Strictly blocked if current server time exceeds round deadline.
+    """
+    clean_id = payload.team_id.strip().upper()
+    active_round, is_deadline_passed, deadline_iso = get_active_round_deadline()
+
+    # Rule 3: Enforce deadline lock
+    if is_deadline_passed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Submission deadline passed at {deadline_iso}. Upload URL generation is locked."
+        )
+
+    # Validate file size (max 20MB)
+    if payload.file_size > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size exceeds the 20MB limit for presentation decks."
+        )
+
+    # Validate extension
+    _, ext = os.path.splitext(payload.filename.lower())
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF, PPT, and PPTX presentation files are accepted."
+        )
+
+    clean_filename = f"{clean_id}_{int(datetime.now().timestamp())}_{payload.filename.replace(' ', '_')}"
+    storage_path = f"submissions/{clean_id}/{clean_filename}"
+
+    # Supabase Storage signed upload URL
+    sb = get_supabase_client()
+    if sb:
+        try:
+            res = sb.storage.from_("submissions").create_signed_upload_url(storage_path)
+            public_url = sb.storage.from_("submissions").get_public_url(storage_path)
+            return {
+                "signed_url": res.get("signedUrl") or res.get("signed_url"),
+                "file_url": public_url,
+                "storage_path": storage_path,
+                "expires_in": 3600
+            }
+        except Exception as e:
+            print(f"Supabase signed upload URL generation error: {e}")
+
+    # Fallback simulated signed URL
+    return {
+        "signed_url": "/api/v1/submissions/upload",
+        "file_url": f"https://storage.nexhack.geeta.ac.in/{storage_path}",
+        "storage_path": storage_path,
+        "expires_in": 3600
+    }
+
+@router.post("/upload")
+async def upload_submission_file(
+    file: UploadFile = File(...),
+    team_id: str = Form(...)
+):
+    """
+    Direct multipart file upload for presentations (max 20MB).
+    Enforces deadline lock and rejects after deadline.
+    """
+    clean_id = team_id.strip().upper()
+    active_round, is_deadline_passed, deadline_iso = get_active_round_deadline()
+
+    # Rule 3: Enforce deadline lock
+    if is_deadline_passed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Submission deadline passed at {deadline_iso}. File uploads are locked."
+        )
+
+    # Validate extension
+    _, ext = os.path.splitext(file.filename.lower())
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF, PPT, and PPTX presentation files are accepted."
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size exceeds the 20MB limit."
+        )
+
+    clean_filename = f"{clean_id}_{int(datetime.now().timestamp())}_{file.filename.replace(' ', '_')}"
+    storage_path = f"submissions/{clean_id}/{clean_filename}"
+
+    # Supabase Storage upload
+    sb = get_supabase_client()
+    if sb:
+        try:
+            sb.storage.from_("submissions").upload(
+                path=storage_path,
+                file=contents,
+                file_options={"content-type": file.content_type or "application/pdf"}
+            )
+            public_url = sb.storage.from_("submissions").get_public_url(storage_path)
+            return {
+                "success": True,
+                "file_url": public_url,
+                "filename": file.filename,
+                "size": len(contents)
+            }
+        except Exception as e:
+            print(f"Supabase storage upload error: {e}")
+
+    # Local fallback
+    upload_dir = os.path.join("static", "uploads", "submissions")
+    os.makedirs(upload_dir, exist_ok=True)
+    local_path = os.path.join(upload_dir, clean_filename)
+    with open(local_path, "wb") as f:
+        f.write(contents)
+
+    return {
+        "success": True,
+        "file_url": f"https://storage.nexhack.geeta.ac.in/submissions/{clean_id}/{clean_filename}",
+        "filename": file.filename,
+        "size": len(contents)
+    }
 
 @router.post("")
 async def create_or_update_submission(payload: SubmissionPayload):
