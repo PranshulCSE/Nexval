@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -216,11 +217,12 @@ async def export_results_excel(
 @router.get("/leaderboard")
 async def get_round_leaderboard(
     round_id: Optional[str] = None,
-    round_number: Optional[int] = Query(2, description="Target round number")
+    round_number: Optional[int] = Query(2, description="Target round number"),
+    use_z_score: bool = Query(False, description="Apply judge z-score normalization")
 ):
     """
     Get round leaderboard with:
-    - Average score across assigned judges
+    - Average score across assigned judges (or z-score normalized)
     - Rubric criterion averages
     - Tie-break applied (Technical > Innovation > Impact)
     - Count of judges completed per team (e.g. 3/3)
@@ -284,6 +286,35 @@ async def get_round_leaderboard(
         t_id = e["team_id"]
         evals_by_team.setdefault(t_id, []).append(e)
 
+    # Z-Score Judge Normalization Preparation
+    judge_stats: Dict[str, tuple[float, float]] = {}
+    global_mean = 80.0
+    global_std = 10.0
+
+    if use_z_score:
+        judge_scores_map: Dict[str, List[float]] = {}
+        all_eval_scores: List[float] = []
+        for e in evaluations_list:
+            j_id = e.get("judge_id")
+            val = float(e.get("total", 0))
+            if j_id and val > 0:
+                judge_scores_map.setdefault(j_id, []).append(val)
+                all_eval_scores.append(val)
+
+        if all_eval_scores:
+            global_mean = sum(all_eval_scores) / len(all_eval_scores)
+            if len(all_eval_scores) > 1:
+                global_std = math.sqrt(sum((x - global_mean)**2 for x in all_eval_scores) / len(all_eval_scores))
+                if global_std < 1.0:
+                    global_std = 10.0
+
+        for j_id, j_scores in judge_scores_map.items():
+            j_mean = sum(j_scores) / len(j_scores)
+            j_std = math.sqrt(sum((x - j_mean)**2 for x in j_scores) / len(j_scores)) if len(j_scores) > 1 else 6.0
+            if j_std < 1.0:
+                j_std = 6.0
+            judge_stats[j_id] = (j_mean, j_std)
+
     leaderboard_entries = []
 
     for team in teams_list:
@@ -296,7 +327,21 @@ async def get_round_leaderboard(
         judges_completed_count = len(completed_evals)
 
         if used_evals:
-            avg_total = sum(float(ev.get("total", 0)) for ev in used_evals) / len(used_evals)
+            if use_z_score:
+                norm_totals = []
+                for ev in used_evals:
+                    raw_val = float(ev.get("total", 0))
+                    j_id = ev.get("judge_id")
+                    if j_id in judge_stats and raw_val > 0:
+                        j_mean, j_std = judge_stats[j_id]
+                        z = (raw_val - j_mean) / j_std
+                        norm_val = min(100.0, max(0.0, global_mean + z * global_std))
+                        norm_totals.append(norm_val)
+                    else:
+                        norm_totals.append(raw_val)
+                avg_total = sum(norm_totals) / len(norm_totals) if norm_totals else 0.0
+            else:
+                avg_total = sum(float(ev.get("total", 0)) for ev in used_evals) / len(used_evals)
         else:
             hash_val = sum(ord(c) for c in t_id)
             base_score = 65 + (hash_val % 30)
@@ -367,6 +412,7 @@ async def get_round_leaderboard(
         "round": target_round,
         "criteria": criteria_list,
         "total_teams": len(ranked_leaderboard),
+        "use_z_score": use_z_score,
         "leaderboard": ranked_leaderboard
     }
 

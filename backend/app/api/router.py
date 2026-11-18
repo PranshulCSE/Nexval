@@ -10,6 +10,7 @@ from app.api.announcements import router as announcements_router
 from app.api.pdf import router as pdf_router
 from app.api.feedback import router as feedback_router
 from app.api.submissions import router as submissions_router
+from app.api.analytics import router as analytics_router
 
 api_router = APIRouter()
 
@@ -32,6 +33,7 @@ api_router.include_router(announcements_router)
 api_router.include_router(pdf_router)
 api_router.include_router(feedback_router)
 api_router.include_router(submissions_router)
+api_router.include_router(analytics_router)
 
 
 
