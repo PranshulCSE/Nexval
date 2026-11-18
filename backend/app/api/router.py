@@ -6,6 +6,8 @@ from app.api.assignments import router as assignments_router
 from app.api.evaluations import router as evaluations_router
 from app.api.audit import router as audit_router
 from app.api.results import router as results_router
+from app.api.announcements import router as announcements_router
+from app.api.pdf import router as pdf_router
 
 api_router = APIRouter()
 
@@ -24,6 +26,8 @@ api_router.include_router(assignments_router)
 api_router.include_router(evaluations_router)
 api_router.include_router(audit_router)
 api_router.include_router(results_router)
+api_router.include_router(announcements_router)
+api_router.include_router(pdf_router)
 
 
 

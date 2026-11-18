@@ -8,7 +8,7 @@ import { Table, Column } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { Search, UserPlus, Upload, Download, Key, Shield, Award, Users, Check, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, Upload, Download, Key, Shield, Award, Users, Check, AlertCircle, Printer } from 'lucide-react';
 
 interface JudgeItem {
   id: string;
@@ -309,6 +309,23 @@ export const JudgesPage: React.FC = () => {
         </Badge>
       ),
     },
+    {
+      header: 'Print Sheet',
+      cell: (j) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+            window.open(`${backendUrl}/api/v1/pdf/judgement-sheet?judge_id=${j.id}&round_id=2`, '_blank');
+          }}
+          leftIcon={<Printer className="w-3.5 h-3.5 text-slate-500" />}
+          className="text-xs text-slate-600 hover:text-slate-900"
+        >
+          PDF
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -322,6 +339,17 @@ export const JudgesPage: React.FC = () => {
         subtitle="Provision judge credentials, assign evaluation roles, and export login details for NexHack 2.0"
         action={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                window.open(`${backendUrl}/api/v1/pdf/judgement-sheet?round_id=2`, '_blank');
+              }}
+              leftIcon={<Printer className="w-3.5 h-3.5" />}
+            >
+              Print Master Sheets
+            </Button>
             <Button
               variant="outline"
               size="sm"

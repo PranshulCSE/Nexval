@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X, Shield, Award, Users } from 'lucide-react';
+import { LogOut, Menu, X, Shield, Award, Users, Bell, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 
@@ -17,12 +17,20 @@ export interface NavbarProps {
   } | null;
   navItems?: NavItem[];
   onSignOut?: () => void;
+  unreadCount?: number;
+  onOpenAnnouncements?: () => void;
+  syncStatus?: 'saved' | 'syncing' | 'offline';
+  pendingSyncCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   user,
   navItems = [],
   onSignOut,
+  unreadCount = 0,
+  onOpenAnnouncements,
+  syncStatus,
+  pendingSyncCount = 0,
 }) => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -88,7 +96,45 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
 
         {/* Right: User Info + Sign out */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Sync Status Badge (if judge or provided) */}
+          {syncStatus && (
+            <div className="hidden md:flex items-center">
+              {syncStatus === 'syncing' ? (
+                <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
+                  Syncing {pendingSyncCount > 0 ? `(${pendingSyncCount})` : ''}
+                </span>
+              ) : syncStatus === 'offline' ? (
+                <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                  <CloudOff className="w-3 h-3 text-slate-500" />
+                  Offline ({pendingSyncCount} saved)
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Cloud className="w-3 h-3 text-emerald-600" />
+                  Saved
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Announcements Bell */}
+          {onOpenAnnouncements && (
+            <button
+              onClick={onOpenAnnouncements}
+              className="relative p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Announcements"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {user ? (
             <>
               {/* User Identity */}

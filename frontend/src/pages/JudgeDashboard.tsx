@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Users, Clock, CheckCircle2, FileEdit, AlertCircle, Search, ArrowRight, ShieldCheck, Sparkles, School } from 'lucide-react';
+import { Users, Clock, CheckCircle2, FileEdit, AlertCircle, Search, ArrowRight, ShieldCheck, Sparkles, School, Printer } from 'lucide-react';
 
 interface AssignedTeamItem {
   id: string;
@@ -180,9 +180,24 @@ export const JudgeDashboard: React.FC = () => {
         title="Judge Evaluation Hub"
         subtitle={`Welcome, ${profile?.name || 'Evaluator'}. Evaluate your assigned teams for NexHack 2.0.`}
         action={
-          <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-800 shadow-subtle">
-            <Clock className="w-4 h-4 text-slate-500 animate-pulse" />
-            <span>Time Left: {countdownText}</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                const rId = activeRound?.id || 2;
+                window.open(`${backendUrl}/api/v1/pdf/judgement-sheet?round_id=${rId}&judge_id=${profile?.id || ''}`, '_blank');
+              }}
+              leftIcon={<Printer className="w-3.5 h-3.5 text-slate-600" />}
+              className="border-slate-200 bg-white shadow-subtle text-slate-700"
+            >
+              Print Sheet (PDF)
+            </Button>
+            <div className="flex items-center gap-2 bg-white border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-800 shadow-subtle">
+              <Clock className="w-4 h-4 text-slate-500 animate-pulse" />
+              <span>Time Left: {countdownText}</span>
+            </div>
           </div>
         }
       />
