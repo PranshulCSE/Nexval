@@ -594,3 +594,38 @@ VALUES
 ('Welcome to NexHack 2.0', 'Judges and mentors, please review your assigned teams on your dashboard. Evaluations are live.', 'info', 'all'),
 ('Round 2 Submission Window', 'Scoring for Round 2 is now open. All rubrics must be completed before the timer ends.', 'warning', 'judge')
 ON CONFLICT DO NOTHING;
+
+
+-- ============================================================================
+-- PHASE 5: SUBMISSIONS & TEAM ACCESS SCHEMA
+-- ============================================================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'teams' AND column_name = 'passcode'
+    ) THEN
+        ALTER TABLE public.teams ADD COLUMN passcode TEXT NOT NULL DEFAULT 'NEX-7K9P';
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS public.submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id TEXT NOT NULL REFERENCES public.teams(team_id) ON DELETE CASCADE,
+    round_id UUID REFERENCES public.rounds(id) ON DELETE SET NULL,
+    github_url TEXT NOT NULL,
+    ppt_pdf_url TEXT,
+    demo_video_url TEXT NOT NULL,
+    live_link TEXT,
+    description TEXT NOT NULL,
+    readme_content TEXT,
+    readme_hash TEXT,
+    github_metadata JSONB DEFAULT '{}'::jsonb,
+    similarity_flags JSONB DEFAULT '[]'::jsonb,
+    is_locked BOOLEAN NOT NULL DEFAULT false,
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT unique_team_round_submission UNIQUE (team_id, round_id)
+);
+
+ALTER TABLE public.submissions ENABLE ROW LEVEL SECURITY;

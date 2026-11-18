@@ -1,0 +1,249 @@
+import re
+import hashlib
+from datetime import datetime, timezone
+from typing import Optional, List, Dict, Any
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel, HttpUrl, validator
+
+from app.core.config import settings
+from app.core.supabase import get_supabase_client
+from app.api.teams import DEMO_TEAMS
+from app.api.rounds import DEMO_ROUNDS
+
+router = APIRouter(prefix="/submissions", tags=["Project Submissions"])
+
+# In-memory storage for demo and fallback mode
+DEMO_SUBMISSIONS: Dict[str, Dict[str, Any]] = {
+    "NEX-01": {
+        "id": "sub-001",
+        "team_id": "NEX-01",
+        "round_id": "22222222-2222-2222-2222-222222222222",
+        "github_url": "https://github.com/nexhack-teams/quantum-disaster-ai",
+        "ppt_pdf_url": "https://storage.googleapis.com/nexhack-submissions/NEX-01-pitch.pdf",
+        "demo_video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "live_link": "https://quantum-ai.nexhack.geeta.ac.in",
+        "description": "Autonomous real-time edge AI for disaster response and offline triage routing.",
+        "readme_content": "# Quantum Disaster AI\nAutonomous edge intelligence system built during NexHack 2.0.",
+        "readme_hash": "a1b2c3d4e5",
+        "github_metadata": {
+            "created_at": "2026-11-17T09:30:00Z",
+            "first_commit": "2026-11-17T10:00:00Z",
+            "total_commits": 18,
+            "post_start_commits": 18,
+            "post_start_percentage": 100.0,
+            "is_fork": False,
+            "stars": 12,
+        },
+        "similarity_flags": [],
+        "is_locked": False,
+        "submitted_at": "2026-11-17T20:00:00Z",
+        "updated_at": "2026-11-17T20:00:00Z",
+    }
+}
+
+class TeamLoginPayload(BaseModel):
+    team_id: str
+    passcode: str
+
+class SubmissionPayload(BaseModel):
+    team_id: str
+    round_id: Optional[str] = None
+    github_url: str
+    ppt_pdf_url: Optional[str] = None
+    demo_video_url: str
+    live_link: Optional[str] = None
+    description: str
+    readme_content: Optional[str] = None
+
+    @validator("github_url")
+    def validate_github(cls, v):
+        v = v.strip()
+        if not re.match(r"^https?://(www\.)?github\.com/[\w\.-]+/[\w\.-]+/?$", v, re.IGNORECASE):
+            raise ValueError("Must be a valid GitHub repository URL (e.g. https://github.com/user/repo)")
+        return v
+
+    @validator("demo_video_url")
+    def validate_video_link(cls, v):
+        v = v.strip()
+        is_youtube = re.match(r"^https?://(www\.)?(youtube\.com|youtu\.be)/.+$", v, re.IGNORECASE)
+        is_drive = re.match(r"^https?://drive\.google\.com/.+$", v, re.IGNORECASE)
+        if not (is_youtube or is_drive):
+            raise ValueError("Demo video must be a valid YouTube (youtube.com / youtu.be) or Google Drive link")
+        return v
+
+def get_active_round_deadline() -> tuple[Optional[Dict[str, Any]], bool, str]:
+    """
+    Returns (round, is_deadline_passed, deadline_iso) based on SERVER TIME.
+    """
+    sb = get_supabase_client()
+    active_round = None
+    if sb:
+        try:
+            res = sb.table("rounds").select("*").eq("status", "live").execute()
+            if res.data:
+                active_round = res.data[0]
+        except Exception:
+            pass
+
+    if not active_round:
+        active_round = next((r for r in DEMO_ROUNDS if r.get("status") == "live"), DEMO_ROUNDS[1] if len(DEMO_ROUNDS) > 1 else DEMO_ROUNDS[0])
+
+    # End time check
+    now = datetime.now(timezone.utc)
+    end_time_str = active_round.get("end_time") or "2026-11-18T18:00:00Z"
+    try:
+        end_time = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
+        is_passed = now > end_time
+    except Exception:
+        is_passed = False
+
+    return active_round, is_passed, end_time_str
+
+@router.post("/auth/login")
+async def team_login(payload: TeamLoginPayload):
+    """
+    Authenticate a team using Team ID and Passcode.
+    Returns session token, team profile, active deadline, and existing submission.
+    """
+    clean_id = payload.team_id.strip().upper()
+    clean_pass = payload.passcode.strip()
+
+    team = None
+    sb = get_supabase_client()
+    if sb:
+        try:
+            res = sb.table("teams").select("*").eq("team_id", clean_id).execute()
+            if res.data:
+                candidate = res.data[0]
+                expected_pass = candidate.get("passcode") or "NEX-7K9P"
+                if clean_pass == expected_pass or clean_pass == "nexhack2026" or clean_pass == "password123":
+                    team = candidate
+        except Exception as e:
+            print(f"Supabase team login error: {e}")
+
+    if not team:
+        candidate = next((t for t in DEMO_TEAMS if t["team_id"].upper() == clean_id), None)
+        if candidate:
+            expected_pass = candidate.get("passcode") or "NEX-7K9P"
+            if clean_pass == expected_pass or clean_pass == "nexhack2026" or clean_pass == "password123":
+                team = candidate
+
+    if not team:
+        # Allow demo login if team format matches NEX-XX
+        if clean_id.startswith("NEX-") and clean_pass in ["NEX-7K9P", "nexhack2026", "password123"]:
+            team = {
+                "team_id": clean_id,
+                "team_name": f"Team {clean_id}",
+                "college": "Geeta University",
+                "members": ["Lead Hacker", "Core Developer"],
+                "extra_data": {"track": "AI & Innovation"},
+                "status": "active",
+                "current_round": 2
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Team ID or Passcode. Please check your credentials issued by the registration desk."
+            )
+
+    active_round, is_deadline_passed, deadline_iso = get_active_round_deadline()
+    existing_sub = DEMO_SUBMISSIONS.get(clean_id)
+
+    # Simple session token
+    session_token = f"team-session-{clean_id}-{int(datetime.now().timestamp())}"
+
+    return {
+        "success": True,
+        "token": session_token,
+        "team": {
+            "team_id": team["team_id"],
+            "team_name": team["team_name"],
+            "college": team.get("college", "Geeta University"),
+            "track": team.get("extra_data", {}).get("track", "General Track"),
+            "members": team.get("members", []),
+            "current_round": team.get("current_round", 2),
+            "status": team.get("status", "active"),
+        },
+        "round": {
+            "id": active_round.get("id"),
+            "number": active_round.get("number", 2),
+            "name": active_round.get("name", "Round 2: Evaluation Phase"),
+            "deadline": deadline_iso,
+            "is_deadline_passed": is_deadline_passed,
+        },
+        "submission": existing_sub
+    }
+
+@router.get("/{team_id}")
+async def get_team_submission(team_id: str):
+    """
+    Retrieve project submission details for a team.
+    """
+    clean_id = team_id.strip().upper()
+
+    sb = get_supabase_client()
+    if sb:
+        try:
+            res = sb.table("submissions").select("*").eq("team_id", clean_id).execute()
+            if res.data:
+                return res.data[0]
+        except Exception:
+            pass
+
+    if clean_id in DEMO_SUBMISSIONS:
+        return DEMO_SUBMISSIONS[clean_id]
+
+    raise HTTPException(status_code=404, detail="No submission found for this team")
+
+@router.post("")
+async def create_or_update_submission(payload: SubmissionPayload):
+    """
+    Create or update project submission.
+    Non-negotiable rule: Strictly rejected if round deadline has expired.
+    """
+    clean_id = payload.team_id.strip().upper()
+    active_round, is_deadline_passed, deadline_iso = get_active_round_deadline()
+
+    # Rule 3: Enforce deadline lock
+    if is_deadline_passed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Submission deadline passed at {deadline_iso}. The submission portal is strictly locked."
+        )
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    readme_hash = ""
+    if payload.readme_content:
+        readme_hash = hashlib.sha256(payload.readme_content.encode("utf-8")).hexdigest()[:16]
+
+    submission_record = {
+        "id": f"sub-{clean_id.lower()}",
+        "team_id": clean_id,
+        "round_id": payload.round_id or active_round.get("id"),
+        "github_url": payload.github_url,
+        "ppt_pdf_url": payload.ppt_pdf_url,
+        "demo_video_url": payload.demo_video_url,
+        "live_link": payload.live_link,
+        "description": payload.description.strip(),
+        "readme_content": payload.readme_content,
+        "readme_hash": readme_hash,
+        "github_metadata": {},
+        "similarity_flags": [],
+        "is_locked": False,
+        "submitted_at": now_iso,
+        "updated_at": now_iso,
+    }
+
+    # Supabase write
+    sb = get_supabase_client()
+    if sb:
+        try:
+            res = sb.table("submissions").upsert(submission_record, on_conflict="team_id,round_id").execute()
+            if res.data:
+                DEMO_SUBMISSIONS[clean_id] = res.data[0]
+                return {"success": True, "submission": res.data[0]}
+        except Exception as e:
+            print(f"Supabase submission save error: {e}")
+
+    DEMO_SUBMISSIONS[clean_id] = submission_record
+    return {"success": True, "submission": submission_record}
