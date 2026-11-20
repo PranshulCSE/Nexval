@@ -26,10 +26,17 @@ class AutoAssignPayload(BaseModel):
     actor_id: Optional[str] = None
 
 class ManualAssignPayload(BaseModel):
-    round_id: str
+    round_id: Optional[str] = None
+    round_number: Optional[int] = 1
     judge_id: str
     team_id: str
+    venue: Optional[str] = None
     action: str = "assign" # "assign" | "unassign"
+    actor_id: Optional[str] = None
+
+class UpdateVenuePayload(BaseModel):
+    team_id: str
+    venue: str
     actor_id: Optional[str] = None
 
 
@@ -243,8 +250,10 @@ async def get_my_assignments(
             status = "pending"
             pending_count += 1
 
+        venue = team.get("venue") or team.get("extra_data", {}).get("venue") or f"Room {(abs(hash(t_id)) % 5) + 101} - Lab {(abs(hash(t_id)) % 4) + 1}"
         team_items.append({
             **team,
+            "venue": venue,
             "evaluation_status": status,
             "evaluation": ev
         })
@@ -262,4 +271,230 @@ async def get_my_assignments(
         "progress_percent": progress_percent,
         "progress_label": f"{done_count}/{total_assigned} done",
         "teams": team_items
+    }
+
+
+@router.post("/manual-assign")
+async def manual_assign_team(payload: ManualAssignPayload):
+    """
+    Manually assign or unassign a specific team to/from a judge, with venue/room assignment.
+    Logged to audit trail.
+    """
+    sb = get_supabase_client()
+    target_round_id = payload.round_id or "11111111-0000-0000-0000-000000000001"
+    clean_team_id = payload.team_id.strip().upper()
+
+    if sb and payload.round_number and not payload.round_id:
+        try:
+            r_res = sb.table("rounds").select("id").eq("number", payload.round_number).single().execute()
+            if r_res.data:
+                target_round_id = r_res.data["id"]
+        except Exception:
+            pass
+
+    # Update venue if provided
+    if payload.venue:
+        if sb:
+            try:
+                # Fetch team extra_data and update venue
+                t_res = sb.table("teams").select("extra_data").eq("team_id", clean_team_id).single().execute()
+                extra = (t_res.data or {}).get("extra_data") or {}
+                extra["venue"] = payload.venue
+                sb.table("teams").update({"extra_data": extra}).eq("team_id", clean_team_id).execute()
+            except Exception as e:
+                print(f"Supabase venue update error: {e}")
+        from app.api.teams import DEMO_TEAMS
+        for t in DEMO_TEAMS:
+            if t["team_id"].upper() == clean_team_id:
+                if "extra_data" not in t or not isinstance(t["extra_data"], dict):
+                    t["extra_data"] = {}
+                t["extra_data"]["venue"] = payload.venue
+                t["venue"] = payload.venue
+                break
+
+    if payload.action == "unassign":
+        if sb:
+            try:
+                sb.table("assignments").delete().eq("round_id", target_round_id).eq("judge_id", payload.judge_id).eq("team_id", clean_team_id).execute()
+                sb.table("audit_log").insert({
+                    "actor_id": payload.actor_id,
+                    "action": "TEAM_MANUALLY_UNASSIGNED",
+                    "entity_type": "ASSIGNMENT",
+                    "entity_id": f"{payload.judge_id}:{clean_team_id}",
+                    "details": {"round_id": target_round_id, "judge_id": payload.judge_id, "team_id": clean_team_id}
+                }).execute()
+            except Exception as e:
+                print(f"Supabase unassign error: {e}")
+
+        # Update in-memory DEMO_ASSIGNMENTS
+        global DEMO_ASSIGNMENTS
+        DEMO_ASSIGNMENTS = [
+            a for a in DEMO_ASSIGNMENTS
+            if not (a.get("round_id") == target_round_id and a.get("judge_id") == payload.judge_id and a.get("team_id") == clean_team_id)
+        ]
+        return {
+            "status": "success",
+            "action": "unassign",
+            "team_id": clean_team_id,
+            "judge_id": payload.judge_id,
+            "message": f"Successfully removed judge assignment for team {clean_team_id}."
+        }
+    else:
+        # action == "assign"
+        if sb:
+            try:
+                sb.table("assignments").upsert({
+                    "round_id": target_round_id,
+                    "judge_id": payload.judge_id,
+                    "team_id": clean_team_id
+                }, on_conflict="round_id,judge_id,team_id").execute()
+
+                sb.table("audit_log").insert({
+                    "actor_id": payload.actor_id,
+                    "action": "TEAM_MANUALLY_ASSIGNED",
+                    "entity_type": "ASSIGNMENT",
+                    "entity_id": f"{payload.judge_id}:{clean_team_id}",
+                    "details": {
+                        "round_id": target_round_id,
+                        "judge_id": payload.judge_id,
+                        "team_id": clean_team_id,
+                        "venue": payload.venue
+                    }
+                }).execute()
+            except Exception as e:
+                print(f"Supabase manual assign error: {e}")
+
+        # In-memory assignment
+        exists = any(
+            a.get("round_id") == target_round_id and a.get("judge_id") == payload.judge_id and a.get("team_id") == clean_team_id
+            for a in DEMO_ASSIGNMENTS
+        )
+        if not exists:
+            DEMO_ASSIGNMENTS.append({
+                "id": f"assign-man-{len(DEMO_ASSIGNMENTS)+1}",
+                "round_id": target_round_id,
+                "judge_id": payload.judge_id,
+                "team_id": clean_team_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+
+        return {
+            "status": "success",
+            "action": "assign",
+            "team_id": clean_team_id,
+            "judge_id": payload.judge_id,
+            "venue": payload.venue,
+            "message": f"Successfully assigned team {clean_team_id} to judge with venue room {payload.venue or 'Default'}."
+        }
+
+
+@router.patch("/venue")
+async def update_team_venue(payload: UpdateVenuePayload):
+    """
+    Update venue room for a team.
+    """
+    clean_team_id = payload.team_id.strip().upper()
+    venue = payload.venue.strip()
+
+    sb = get_supabase_client()
+    if sb:
+        try:
+            t_res = sb.table("teams").select("extra_data").eq("team_id", clean_team_id).single().execute()
+            extra = (t_res.data or {}).get("extra_data") or {}
+            extra["venue"] = venue
+            sb.table("teams").update({"extra_data": extra}).eq("team_id", clean_team_id).execute()
+
+            sb.table("audit_log").insert({
+                "actor_id": payload.actor_id,
+                "action": "TEAM_VENUE_UPDATED",
+                "entity_type": "TEAM",
+                "entity_id": clean_team_id,
+                "details": {"venue": venue}
+            }).execute()
+        except Exception as e:
+            print(f"Supabase venue update error: {e}")
+
+    from app.api.teams import DEMO_TEAMS
+    for t in DEMO_TEAMS:
+        if t["team_id"].upper() == clean_team_id:
+            if "extra_data" not in t or not isinstance(t["extra_data"], dict):
+                t["extra_data"] = {}
+            t["extra_data"]["venue"] = venue
+            t["venue"] = venue
+            break
+
+    return {
+        "status": "success",
+        "team_id": clean_team_id,
+        "venue": venue,
+        "message": f"Updated venue room for team {clean_team_id} to '{venue}'."
+    }
+
+
+@router.get("/overview")
+async def get_assignments_overview(round_number: int = 1):
+    """
+    Admin overview: all teams with their assigned judges and venue rooms.
+    """
+    sb = get_supabase_client()
+    teams: List[Dict[str, Any]] = []
+    judges: List[Dict[str, Any]] = []
+    assignments: List[Dict[str, Any]] = []
+    round_id = "11111111-0000-0000-0000-000000000001"
+
+    if sb:
+        try:
+            r_res = sb.table("rounds").select("*").eq("number", round_number).single().execute()
+            if r_res.data:
+                round_id = r_res.data["id"]
+
+            t_res = sb.table("teams").select("team_id, team_name, college, extra_data, status").eq("status", "active").execute()
+            teams = t_res.data or []
+
+            j_res = sb.table("profiles").select("id, name, email, role").in_("role", ["judge", "mentor"]).execute()
+            judges = j_res.data or []
+
+            a_res = sb.table("assignments").select("judge_id, team_id").eq("round_id", round_id).execute()
+            assignments = a_res.data or []
+        except Exception:
+            pass
+
+    if not teams:
+        from app.api.teams import DEMO_TEAMS
+        teams = [t for t in DEMO_TEAMS if t.get("status") == "active"]
+    if not judges:
+        from app.api.judges import DEMO_JUDGES
+        judges = DEMO_JUDGES
+    if not assignments:
+        assignments = DEMO_ASSIGNMENTS
+
+    # Build judge map
+    judge_map = {j["id"]: j for j in judges}
+
+    # Build team assignments
+    team_rows = []
+    for team in teams:
+        t_id = team["team_id"]
+        venue = team.get("venue") or team.get("extra_data", {}).get("venue") or f"Room {(abs(hash(t_id)) % 5) + 101} - Lab {(abs(hash(t_id)) % 4) + 1}"
+        
+        assigned_judge_ids = [a["judge_id"] for a in assignments if a.get("team_id") == t_id]
+        assigned_judges = [
+            {"id": j_id, "name": judge_map.get(j_id, {}).get("name", "Judge"), "role": judge_map.get(j_id, {}).get("role", "judge")}
+            for j_id in assigned_judge_ids
+            if j_id in judge_map
+        ]
+
+        team_rows.append({
+            "team_id": t_id,
+            "team_name": team["team_name"],
+            "college": team.get("college", "Geeta University"),
+            "venue": venue,
+            "assigned_judges": assigned_judges
+        })
+
+    return {
+        "round_id": round_id,
+        "round_number": round_number,
+        "teams": team_rows,
+        "judges": judges
     }
