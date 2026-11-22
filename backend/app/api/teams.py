@@ -343,8 +343,20 @@ DEMO_TEAMS: List[Dict[str, Any]] = [
         "current_round": 1,
         "created_at": "2026-11-17T14:25:00Z"
     }
-
 ]
+
+# Pre-seed realistic venue rooms for demo teams
+DEFAULT_VENUES = [
+    "Room 101 - CS Lab", "Room 102 - IoT Lab", "Room 201 - AI & Robotics Lab",
+    "Room 202 - Cloud Lab", "Room 301 - Data Science Lab", "Auditorium - Station 1",
+    "Auditorium - Station 2", "Innovation Hub - Station 1", "Innovation Hub - Station 2"
+]
+for idx, t in enumerate(DEMO_TEAMS):
+    v = DEFAULT_VENUES[idx % len(DEFAULT_VENUES)]
+    t["venue"] = v
+    if "extra_data" not in t or not isinstance(t["extra_data"], dict):
+        t["extra_data"] = {}
+    t["extra_data"]["venue"] = v
 
 def get_supabase_client() -> Optional[Client]:
     if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY and "placeholder" not in settings.SUPABASE_URL:
