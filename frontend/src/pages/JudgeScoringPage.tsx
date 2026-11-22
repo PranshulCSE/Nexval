@@ -7,7 +7,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { ArrowLeft, CheckCircle2, Lock, Save, Clock, AlertTriangle, School, Award, Sparkles, MessageSquare, Cloud, CloudOff, RefreshCw, Github, Video, FileText, Globe, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Lock, Save, Clock, AlertTriangle, School, Award, Sparkles, MessageSquare, Cloud, CloudOff, RefreshCw, Github, Video, FileText, Globe, ExternalLink, MapPin } from 'lucide-react';
 import { useOfflineSync, saveToOfflineQueue } from '../lib/offlineQueue';
 
 interface RubricCriterion {
@@ -21,6 +21,7 @@ interface TeamData {
   team_id: string;
   team_name: string;
   college?: string;
+  venue?: string;
   members?: string[];
   extra_data?: Record<string, any>;
   current_round?: number;
@@ -322,6 +323,7 @@ export const JudgeScoringPage: React.FC = () => {
   const navItems = [
     { label: 'My Teams', href: '/judge' },
     { label: 'Evaluation Guidelines', href: '/judge/guidelines' },
+    { label: 'Mentor Guidelines', href: '/mentor/guidelines' },
   ];
 
 
@@ -414,6 +416,10 @@ export const JudgeScoringPage: React.FC = () => {
               <span className="flex items-center gap-1">
                 <School className="w-3.5 h-3.5 text-slate-400" />
                 {team?.college || 'Geeta University'}
+              </span>
+              <span className="inline-flex items-center gap-1 font-medium text-amber-900 bg-amber-50 border border-amber-200/90 px-2 py-0.5 rounded-md">
+                <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
+                Venue: <strong className="font-semibold">{team?.venue || team?.extra_data?.venue || 'Room 101 - CS Lab'}</strong>
               </span>
               {team?.members && (
                 <span className="text-slate-400">
