@@ -8,7 +8,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Users, Clock, CheckCircle2, FileEdit, AlertCircle, Search, ArrowRight, ShieldCheck, Sparkles, School, Printer } from 'lucide-react';
+import { Users, Clock, CheckCircle2, FileEdit, AlertCircle, Search, ArrowRight, ShieldCheck, Sparkles, School, Printer, MapPin } from 'lucide-react';
 import { useOfflineSync } from '../lib/offlineQueue';
 
 interface AssignedTeamItem {
@@ -16,6 +16,7 @@ interface AssignedTeamItem {
   team_id: string;
   team_name: string;
   college?: string;
+  venue?: string;
   members?: string[];
   extra_data?: Record<string, any>;
   evaluation_status: 'pending' | 'draft' | 'submitted';
@@ -165,6 +166,7 @@ export const JudgeDashboard: React.FC = () => {
   const navItems = [
     { label: 'My Teams', href: '/judge' },
     { label: 'Evaluation Guidelines', href: '/judge/guidelines' },
+    { label: 'Mentor Guidelines', href: '/mentor/guidelines' },
   ];
 
   const handleOpenEvaluate = (team: AssignedTeamItem) => {
@@ -373,6 +375,11 @@ export const JudgeDashboard: React.FC = () => {
                       Project: <span className="text-slate-500">{team.extra_data.project}</span>
                     </p>
                   )}
+
+                  <div className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-700 bg-slate-100/90 border border-slate-200 px-2 py-0.5 rounded-md">
+                    <MapPin className="w-3 h-3 text-amber-600 shrink-0" />
+                    <span>Venue: <strong className="font-semibold text-slate-900">{team.venue || team.extra_data?.venue || 'Room 101 - CS Lab'}</strong></span>
+                  </div>
                 </div>
 
                 {/* Bottom button / total score */}
