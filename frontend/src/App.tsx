@@ -13,6 +13,8 @@ import { JudgeDashboard } from './pages/JudgeDashboard';
 import { PublicResultsPage } from './pages/PublicResultsPage';
 import { TeamPortalPage } from './pages/TeamPortalPage';
 import { JudgeScoringPage } from './pages/JudgeScoringPage';
+import { EvaluationGuidelinesPage } from './pages/EvaluationGuidelinesPage';
+import { MentorGuidelinesPage } from './pages/MentorGuidelinesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -130,6 +132,50 @@ export const App: React.FC = () => {
         element={
           <ProtectedRoute allowedRoles={['judge', 'mentor']}>
             <JudgeScoringPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Evaluation Guidelines */}
+      <Route
+        path="/judge/guidelines"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'judge', 'mentor']}>
+            <EvaluationGuidelinesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/guidelines"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'judge', 'mentor']}>
+            <EvaluationGuidelinesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Mentor Portal & Guidelines */}
+      <Route
+        path="/mentor"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'judge', 'mentor']}>
+            <MentorGuidelinesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mentor/guidelines"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'judge', 'mentor']}>
+            <MentorGuidelinesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/judge/mentor"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'judge', 'mentor']}>
+            <MentorGuidelinesPage />
           </ProtectedRoute>
         }
       />
