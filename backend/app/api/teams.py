@@ -371,6 +371,7 @@ class TeamCommitItem(BaseModel):
     team_name: str
     college: Optional[str] = None
     members: Optional[List[str]] = Field(default_factory=list)
+    passcode: Optional[str] = "NEX-7K9P"
     extra_data: Optional[Dict[str, Any]] = Field(default_factory=dict)
     current_round: Optional[int] = 1
     status: Optional[str] = "active"
@@ -442,9 +443,10 @@ async def preview_upload(file: UploadFile = File(...)):
         return None
 
     k_team_id = find_key(["teamid", "team_id", "teamno", "id", "code"])
-    k_team_name = find_key(["teamname", "team_name", "name", "projectname", "title"])
+    k_team_name = find_key(["teamname", "team_name", "name"])
     k_college = find_key(["college", "university", "institution", "institute", "school"])
     k_members = find_key(["members", "team_members", "teammates", "students", "participants"])
+    k_passcode = find_key(["passcode", "password", "pin", "teampasscode"])
 
     # Collect existing team IDs to check against database/demo
     existing_team_ids = set()
@@ -494,8 +496,13 @@ async def preview_upload(file: UploadFile = File(...)):
             else:
                 members_list = [m.strip() for m in raw_members.replace(";", ",").split(",") if m.strip()]
 
-        # 5. Extra data collection: any column not mapped above
-        standard_keys = {k for k in [k_team_id, k_team_name, k_college, k_members] if k}
+        # 5. Passcode (optional in CSV, defaults to standard NEX-7K9P)
+        raw_passcode = row.get(k_passcode, "").strip() if k_passcode else ""
+        if not raw_passcode:
+            raw_passcode = "NEX-7K9P"
+
+        # 6. Extra data collection: any column not mapped above
+        standard_keys = {k for k in [k_team_id, k_team_name, k_college, k_members, k_passcode] if k}
         extra_data = {}
         for k, v in row.items():
             if k not in standard_keys and v:
@@ -507,6 +514,7 @@ async def preview_upload(file: UploadFile = File(...)):
             "team_name": raw_name,
             "college": raw_college,
             "members": members_list,
+            "passcode": raw_passcode,
             "extra_data": extra_data,
             "already_exists": raw_id in existing_team_ids,
             "status": "active",
@@ -551,6 +559,7 @@ async def commit_upload(payload: CommitPayload):
             "team_name": t.team_name,
             "college": t.college,
             "members": t.members or [],
+            "passcode": t.passcode or "NEX-7K9P",
             "extra_data": t.extra_data or {},
             "status": t.status or "active",
             "current_round": t.current_round or 1
