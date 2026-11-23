@@ -23,7 +23,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'judge' | 'mentor';
+  role: 'super_admin' | 'admin' | 'judge' | 'mentor';
   created_at?: string;
   updated_at?: string;
 }
