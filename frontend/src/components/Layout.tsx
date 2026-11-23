@@ -9,7 +9,7 @@ export interface LayoutProps {
   user?: {
     name: string;
     email: string;
-    role: 'admin' | 'judge' | 'mentor';
+    role: 'super_admin' | 'admin' | 'judge' | 'mentor';
   } | null;
   navItems?: NavItem[];
   onSignOut?: () => void;
