@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type BadgeVariant = 'yellow' | 'blue' | 'green' | 'gray' | 'red';
+export type BadgeVariant = 'yellow' | 'blue' | 'green' | 'gray' | 'red' | 'purple';
 
 export interface BadgeProps {
   children: React.ReactNode;
@@ -27,6 +27,10 @@ export const Badge: React.FC<BadgeProps> = ({
     green: {
       container: 'bg-[#F0FDF4] text-[#166534] border-[#DCFCE7]',
       dotColor: 'bg-[#22C55E]'
+    },
+    purple: {
+      container: 'bg-[#F3E8FF] text-[#6B21A8] border-[#E9D5FF]',
+      dotColor: 'bg-[#A855F7]'
     },
     gray: {
       container: 'bg-[#F1F5F9] text-[#475569] border-[#E2E8F0]',
