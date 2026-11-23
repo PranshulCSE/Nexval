@@ -37,7 +37,7 @@ export const TeamPortalPage: React.FC = () => {
   const { success, error } = useToast();
 
   const [team, setTeam] = useState<TeamSession | null>(null);
-  const [deadline, setDeadline] = useState<string>('2026-11-18T18:00:00Z');
+  const [deadline, setDeadline] = useState<string>('2026-11-25T18:00:00Z');
   const [isDeadlinePassed, setIsDeadlinePassed] = useState<boolean>(false);
   const [countdownText, setCountdownText] = useState<string>('');
 
@@ -65,7 +65,7 @@ export const TeamPortalPage: React.FC = () => {
     try {
       const parsed = JSON.parse(saved);
       setTeam(parsed.team);
-      if (parsed.round?.deadline) {
+      if (parsed.round?.deadline && new Date(parsed.round.deadline).getTime() > Date.now()) {
         setDeadline(parsed.round.deadline);
         setIsDeadlinePassed(Boolean(parsed.round.is_deadline_passed));
       }
@@ -74,10 +74,27 @@ export const TeamPortalPage: React.FC = () => {
       } else {
         fetchLatestSubmission(parsed.team.team_id);
       }
+      fetchLatestDeadline();
     } catch {
       navigate('/login');
     }
   }, [navigate]);
+
+  const fetchLatestDeadline = async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      let res = await fetch(`${backendUrl}/api/v1/rounds/submission-deadline`).catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch('/api/v1/rounds/submission-deadline').catch(() => null);
+      }
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.submission_deadline) {
+          setDeadline(data.submission_deadline);
+        }
+      }
+    } catch {}
+  };
 
   const populateForm = (sub: any) => {
     setExistingSubmission(sub);
@@ -113,6 +130,7 @@ export const TeamPortalPage: React.FC = () => {
         setIsDeadlinePassed(true);
         return;
       }
+      setIsDeadlinePassed(false);
       const hrs = Math.floor(diff / (1000 * 60 * 60));
       const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const secs = Math.floor((diff % (1000 * 60)) / 1000);
