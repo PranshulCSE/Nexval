@@ -5,7 +5,7 @@ import { Session, User } from '@supabase/supabase-js';
 // Pre-configured seed users for Phase 0 demo & evaluation
 export const SEED_DEMO_USERS: Record<string, UserProfile & { password: string }> = {
   'superadmin@nexhack.com': {
-    id: 's0000000-0000-0000-0000-000000000001',
+    id: 'f0000000-0000-0000-0000-000000000001',
     name: 'Super Administrator',
     email: 'superadmin@nexhack.com',
     role: 'super_admin',
