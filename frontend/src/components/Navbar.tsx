@@ -13,7 +13,7 @@ export interface NavbarProps {
   user?: {
     name: string;
     email: string;
-    role: 'admin' | 'judge' | 'mentor';
+    role: 'super_admin' | 'admin' | 'judge' | 'mentor';
   } | null;
   navItems?: NavItem[];
   onSignOut?: () => void;
@@ -35,13 +35,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const roleBadgeVariant: Record<'admin' | 'judge' | 'mentor', 'yellow' | 'blue' | 'green'> = {
+  const roleBadgeVariant: Record<'super_admin' | 'admin' | 'judge' | 'mentor', 'purple' | 'yellow' | 'blue' | 'green'> = {
+    super_admin: 'purple',
     admin: 'yellow',
     judge: 'blue',
     mentor: 'green',
   };
 
   const roleIcons = {
+    super_admin: <Shield className="w-3 h-3 mr-1 inline text-purple-600" />,
     admin: <Shield className="w-3 h-3 mr-1 inline" />,
     judge: <Award className="w-3 h-3 mr-1 inline" />,
     mentor: <Users className="w-3 h-3 mr-1 inline" />,
