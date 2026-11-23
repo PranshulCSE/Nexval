@@ -9,7 +9,7 @@ from pydantic import BaseModel, HttpUrl, validator
 from app.core.config import settings
 from app.core.supabase import get_supabase_client
 from app.api.teams import DEMO_TEAMS
-from app.api.rounds import DEMO_ROUNDS
+from app.api.rounds import DEMO_ROUNDS, SUBMISSION_DEADLINE_STATE
 from app.services.github_checker import check_github_repository
 from app.services.similarity_checker import check_submission_similarity
 
@@ -144,6 +144,10 @@ class SubmissionPayload(BaseModel):
 def get_active_round_deadline() -> tuple[Optional[Dict[str, Any]], bool, str]:
     """
     Returns (round, is_deadline_passed, deadline_iso) based on SERVER TIME.
+    Rule:
+    1. Active round must not be explicitly 'closed'. If active round is closed, is_passed = True.
+    2. Submission deadline is decided by Super Admin (from SUBMISSION_DEADLINE_STATE or active round).
+    3. If round is live/open, teams CAN submit as long as server time <= submission deadline.
     """
     sb = get_supabase_client()
     active_round = None
@@ -156,18 +160,36 @@ def get_active_round_deadline() -> tuple[Optional[Dict[str, Any]], bool, str]:
             pass
 
     if not active_round:
-        active_round = next((r for r in DEMO_ROUNDS if r.get("status") == "live"), DEMO_ROUNDS[1] if len(DEMO_ROUNDS) > 1 else DEMO_ROUNDS[0])
+        active_round = next((r for r in DEMO_ROUNDS if r.get("status") == "live"), None)
+        if not active_round:
+            active_round = DEMO_ROUNDS[0] if DEMO_ROUNDS else None
 
-    # End time check
+    if not active_round:
+        return None, True, ""
+
+    # Submission deadline decided by Super Admin
+    deadline_iso = (
+        SUBMISSION_DEADLINE_STATE.get("deadline")
+        or active_round.get("submission_deadline")
+        or active_round.get("end_time")
+        or "2026-11-25T18:00:00Z"
+    )
+
     now = datetime.now(timezone.utc)
-    end_time_str = active_round.get("end_time") or "2026-11-18T18:00:00Z"
-    try:
-        end_time = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
-        is_passed = now > end_time
-    except Exception:
-        is_passed = False
+    is_passed = False
 
-    return active_round, is_passed, end_time_str
+    # If round is explicitly closed by admin, submissions cannot be accepted
+    if active_round.get("status") == "closed":
+        is_passed = True
+    else:
+        # Check against Super Admin submission deadline
+        try:
+            deadline_dt = datetime.fromisoformat(deadline_iso.replace("Z", "+00:00"))
+            is_passed = now > deadline_dt
+        except Exception:
+            is_passed = False
+
+    return active_round, is_passed, deadline_iso
 
 @router.post("/auth/login")
 async def team_login(payload: TeamLoginPayload):
