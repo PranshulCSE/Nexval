@@ -455,7 +455,7 @@ export const TeamsPage: React.FC = () => {
         isOpen={Boolean(selectedFeedbackTeamId)}
         onClose={() => setSelectedFeedbackTeamId(null)}
         teamId={selectedFeedbackTeamId}
-        isAdmin={profile?.role === 'admin'}
+        isAdmin={profile?.role === 'admin' || profile?.role === 'super_admin'}
       />
     </Layout>
   );
