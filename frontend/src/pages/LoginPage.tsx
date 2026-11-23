@@ -78,7 +78,7 @@ export const LoginPage: React.FC = () => {
               venue: 'Room 101 - CS Lab',
             },
             round: {
-              deadline: '2026-11-18T18:00:00Z',
+              deadline: '2026-11-25T18:00:00Z',
               is_deadline_passed: false,
             },
           };
@@ -135,7 +135,7 @@ export const LoginPage: React.FC = () => {
     if (fromLocation && fromLocation !== '/login') {
       navigate(fromLocation, { replace: true });
     } else {
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'super_admin') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/judge', { replace: true });
@@ -394,6 +394,21 @@ export const LoginPage: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin('superadmin@nexhack.com')}
+                  className="flex items-center justify-between p-2.5 bg-gradient-to-r from-purple-50/70 to-indigo-50/70 border border-purple-200/90 rounded-xl text-left hover:border-purple-400 hover:bg-purple-50 transition-all group sm:col-span-2"
+                >
+                  <div>
+                    <p className="text-xs font-semibold text-purple-950 group-hover:text-purple-900 flex items-center">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-600 mr-1.5" />
+                      Super Administrator
+                    </p>
+                    <p className="text-[10px] text-purple-600/80 font-mono">superadmin@nexhack.com &bull; Pass: password123</p>
+                  </div>
+                  <Badge variant="purple" className="text-[9px] py-0 px-1.5 bg-purple-100 text-purple-700 border-purple-200">super_admin</Badge>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleDemoLogin('admin@nexhack.com')}
