@@ -7,7 +7,7 @@ import { Card } from './ui/Card';
 
 export interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'judge' | 'mentor')[];
+  allowedRoles?: ('super_admin' | 'admin' | 'judge' | 'mentor')[];
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -47,9 +47,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             Your account ({profile?.email}) with role <span className="font-semibold text-slate-700">{currentRole}</span> does not have permission to view this section.
           </p>
           <div className="flex justify-center gap-3">
-            <Link to={currentRole === 'admin' ? '/admin' : '/judge'}>
+            <Link to={currentRole === 'admin' || currentRole === 'super_admin' ? '/admin' : '/judge'}>
               <Button variant="primary">
-                Go to {currentRole === 'admin' ? 'Admin Portal' : 'Judge Portal'}
+                Go to {currentRole === 'admin' || currentRole === 'super_admin' ? 'Admin Portal' : 'Judge Portal'}
               </Button>
             </Link>
           </div>
