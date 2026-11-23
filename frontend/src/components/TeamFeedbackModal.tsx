@@ -16,7 +16,7 @@ interface TeamFeedbackData {
   team_id: string;
   team_name: string;
   college: string;
-  track: string;
+  track?: string;
   round_number: number;
   round_name: string;
   is_published: boolean;
@@ -151,7 +151,7 @@ export const TeamFeedbackModal: React.FC<TeamFeedbackModalProps> = ({
                 <h4 className="text-sm font-bold text-slate-900">{data.team_name}</h4>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                {data.college} &bull; <span className="font-medium text-slate-700">{data.track}</span>
+                {data.college}{data.track ? <> &bull; <span className="font-medium text-slate-700">{data.track}</span></> : null}
               </p>
             </div>
 

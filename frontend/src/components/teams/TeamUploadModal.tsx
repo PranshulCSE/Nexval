@@ -64,10 +64,10 @@ export const TeamUploadModal: React.FC<TeamUploadModalProps> = ({
 
   const downloadSampleCSV = () => {
     const csvContent =
-      "team_id,team_name,college,members,project_title,track\n" +
-      "NEX-101,Aegis Guard,Geeta University,\"Aarav Sen, Kavya Iyer\",Autonomous Threat Defender,Cybersecurity\n" +
-      "NEX-102,Solaris X,IIT Roorkee,\"Nikhil Sharma, Rhea Rao\",Solar Smart Inverter,CleanTech\n" +
-      "NEX-103,MediSync,BITS Pilani,\"Tanmay Roy, Sanya Goel\",Predictive ICU Alert System,Healthcare\n";
+      "team_id,team_name,college,members\n" +
+      "NEX-101,Aegis Guard,Geeta University,\"Aarav Sen, Kavya Iyer\"\n" +
+      "NEX-102,Solaris X,IIT Roorkee,\"Nikhil Sharma, Rhea Rao\"\n" +
+      "NEX-103,MediSync,BITS Pilani,\"Tanmay Roy, Sanya Goel\"\n";
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -178,6 +178,7 @@ export const TeamUploadModal: React.FC<TeamUploadModalProps> = ({
           team_name: r.team_name,
           college: r.college || 'Geeta University',
           members: r.members || [],
+          passcode: (r as any).passcode || (r.extra_data?.passcode) || 'NEX-7K9P',
           extra_data: r.extra_data || {},
           current_round: 1,
           status: 'active',
@@ -332,10 +333,10 @@ export const TeamUploadModal: React.FC<TeamUploadModalProps> = ({
               Supports CSV, Microsoft Excel (.xlsx, .xls). Unrecognized columns are automatically captured into extra data.
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
-              <Badge variant="gray" className="text-[10px]">team_id</Badge>
-              <Badge variant="gray" className="text-[10px]">team_name</Badge>
-              <Badge variant="gray" className="text-[10px]">college</Badge>
-              <Badge variant="gray" className="text-[10px]">members</Badge>
+              <Badge variant="gray" className="text-[10px]">team_id (required)</Badge>
+              <Badge variant="gray" className="text-[10px]">team_name (required)</Badge>
+              <Badge variant="gray" className="text-[10px]">college (optional)</Badge>
+              <Badge variant="gray" className="text-[10px]">members (optional)</Badge>
             </div>
           </div>
 
