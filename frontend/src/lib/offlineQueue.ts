@@ -149,6 +149,10 @@ export async function flushOfflineQueue(backendUrl: string = ''): Promise<{ sync
       if (res.ok) {
         await removeFromOfflineQueue(item.key);
         synced++;
+      } else if (res.status >= 400 && res.status < 500) {
+        // Client validation error or rejected by server rule: remove from queue to avoid infinite retry loop
+        await removeFromOfflineQueue(item.key);
+        failed++;
       } else {
         failed++;
       }

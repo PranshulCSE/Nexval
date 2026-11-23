@@ -213,9 +213,7 @@ export const JudgeScoringPage: React.FC = () => {
             setLastSavedTime(new Date().toLocaleTimeString());
             if (data.evaluation?.id) setEvaluationId(data.evaluation.id);
           } else {
-            await saveToOfflineQueue(payload);
-            setSaveStatus('saved');
-            setLastSavedTime(new Date().toLocaleTimeString());
+            setSaveStatus('error');
           }
         } catch (e) {
           // If network fails, safely save into IndexedDB offline queue
