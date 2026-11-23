@@ -25,8 +25,8 @@ DEMO_ROUNDS: List[Dict[str, Any]] = [
         "status": "live",
         "promote_count": 150,
         "judges_per_team": 3,
-        "start_time": "2026-11-17T14:00:00Z",
-        "end_time": None,
+        "start_time": "2026-11-23T10:00:00Z",
+        "end_time": "2026-11-23T18:00:00Z",
         "criteria": []
     },
     {
@@ -37,8 +37,8 @@ DEMO_ROUNDS: List[Dict[str, Any]] = [
         "status": "draft",
         "promote_count": 20,
         "judges_per_team": 3,
-        "start_time": None,
-        "end_time": None,
+        "start_time": "2026-11-23T18:00:00Z",
+        "end_time": "2026-11-24T04:00:00Z",
         "criteria": [
             {"id": "crit-2-1", "name": "Technical Execution", "max_marks": 30.0, "sort_order": 1},
             {"id": "crit-2-2", "name": "Innovation & Creativity", "max_marks": 25.0, "sort_order": 2},
@@ -55,8 +55,8 @@ DEMO_ROUNDS: List[Dict[str, Any]] = [
         "status": "draft",
         "promote_count": 3,
         "judges_per_team": 5,
-        "start_time": None,
-        "end_time": None,
+        "start_time": "2026-11-24T04:00:00Z",
+        "end_time": "2026-11-24T12:00:00Z",
         "criteria": [
             {"id": "crit-3-1", "name": "Technical Execution", "max_marks": 30.0, "sort_order": 1},
             {"id": "crit-3-2", "name": "Innovation & Creativity", "max_marks": 25.0, "sort_order": 2},
@@ -66,6 +66,13 @@ DEMO_ROUNDS: List[Dict[str, Any]] = [
         ]
     }
 ]
+
+# Submission deadline state: Decided and controlled exclusively by SUPER ADMIN
+SUBMISSION_DEADLINE_STATE: Dict[str, Any] = {
+    "deadline": "2026-11-25T18:00:00Z",
+    "updated_at": "2026-11-23T11:00:00Z",
+    "updated_by": "superadmin@nexhack.com"
+}
 
 class RoundStatusPayload(BaseModel):
     status: str = Field(..., pattern="^(draft|live|closed)$")
@@ -86,14 +93,26 @@ class RoundCreatePayload(BaseModel):
     type: str = Field(..., pattern="^(remarks|scoring)$")
     promote_count: Optional[int] = 20
     judges_per_team: Optional[int] = 3
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     actor_id: Optional[str] = None
+
+class RoundSchedulePayload(BaseModel):
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    actor_id: Optional[str] = None
+
+class SubmissionDeadlinePayload(BaseModel):
+    deadline: str
+    actor_id: Optional[str] = None
+    actor_role: Optional[str] = None
 
 
 
 @router.get("")
 async def get_rounds():
     """
-    Get all rounds with server time and criteria.
+    Get all rounds with server time, submission deadline, and criteria.
     """
     server_time = datetime.now(timezone.utc).isoformat()
     sb = get_supabase_client()
@@ -110,6 +129,7 @@ async def get_rounds():
 
             return {
                 "server_time": server_time,
+                "submission_deadline": SUBMISSION_DEADLINE_STATE["deadline"],
                 "rounds": list(rounds_map.values())
             }
         except Exception:
@@ -117,7 +137,65 @@ async def get_rounds():
 
     return {
         "server_time": server_time,
+        "submission_deadline": SUBMISSION_DEADLINE_STATE["deadline"],
         "rounds": DEMO_ROUNDS
+    }
+
+
+@router.get("/submission-deadline")
+async def get_submission_deadline():
+    """
+    Get the official project submission deadline decided by Super Admin.
+    """
+    return {
+        "status": "success",
+        "submission_deadline": SUBMISSION_DEADLINE_STATE["deadline"],
+        "updated_at": SUBMISSION_DEADLINE_STATE.get("updated_at"),
+        "updated_by": SUBMISSION_DEADLINE_STATE.get("updated_by"),
+        "server_time": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@router.put("/submission-deadline")
+async def update_submission_deadline(payload: SubmissionDeadlinePayload):
+    """
+    Update the official project submission deadline.
+    RESTRICTED: Only SUPER ADMIN can set or modify this deadline.
+    """
+    if payload.actor_role and payload.actor_role != "super_admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: The submission deadline must be decided by Super Admin only. Admins do not have permission to alter the submission cutoff."
+        )
+
+    server_now = datetime.now(timezone.utc).isoformat()
+    SUBMISSION_DEADLINE_STATE["deadline"] = payload.deadline
+    SUBMISSION_DEADLINE_STATE["updated_at"] = server_now
+    SUBMISSION_DEADLINE_STATE["updated_by"] = payload.actor_id or "super_admin"
+
+    sb = get_supabase_client()
+    if sb:
+        try:
+            sb.table("audit_log").insert({
+                "actor_id": payload.actor_id,
+                "action": "SUBMISSION_DEADLINE_UPDATE",
+                "entity_type": "DEADLINE",
+                "entity_id": "global",
+                "details": {
+                    "new_deadline": payload.deadline,
+                    "updated_by": payload.actor_id or "super_admin",
+                    "server_time": server_now
+                }
+            }).execute()
+        except Exception as e:
+            print(f"Audit log error: {e}")
+
+    return {
+        "status": "success",
+        "message": "Submission deadline successfully updated by Super Admin.",
+        "submission_deadline": SUBMISSION_DEADLINE_STATE["deadline"],
+        "updated_at": server_now,
+        "updated_by": SUBMISSION_DEADLINE_STATE["updated_by"]
     }
 
 
@@ -134,6 +212,8 @@ async def create_round(payload: RoundCreatePayload):
         "status": "draft",
         "promote_count": payload.promote_count or 20,
         "judges_per_team": payload.judges_per_team or 3,
+        "start_time": payload.start_time,
+        "end_time": payload.end_time,
     }
 
     if sb:
@@ -155,6 +235,74 @@ async def create_round(payload: RoundCreatePayload):
         mock_entry = {"id": mock_id, **new_round, "criteria": []}
         DEMO_ROUNDS.append(mock_entry)
         return {"status": "success", "round": mock_entry}
+
+
+@router.patch("/{round_id}/schedule")
+async def schedule_round(round_id: str, payload: RoundSchedulePayload):
+    """
+    Admin power: Schedule a round for a fixed start and end time.
+    """
+    update_data: Dict[str, Any] = {}
+    if payload.start_time is not None:
+        update_data["start_time"] = payload.start_time
+    if payload.end_time is not None:
+        update_data["end_time"] = payload.end_time
+
+    sb = get_supabase_client()
+    if sb:
+        try:
+            sb.table("rounds").update(update_data).eq("id", round_id).execute()
+            sb.table("audit_log").insert({
+                "actor_id": payload.actor_id,
+                "action": "ROUND_SCHEDULE_UPDATE",
+                "entity_type": "ROUND",
+                "entity_id": round_id,
+                "details": update_data
+            }).execute()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        for r in DEMO_ROUNDS:
+            if str(r.get("id")) == str(round_id) or str(r.get("number")) == str(round_id):
+                r.update(update_data)
+                break
+
+    return {
+        "status": "success",
+        "round_id": round_id,
+        "schedule": update_data,
+        "message": "Round schedule window updated successfully."
+    }
+
+
+@router.delete("/{round_id}")
+async def delete_round(round_id: str, actor_id: Optional[str] = None):
+    """
+    Admin power: Delete an existing round.
+    """
+    sb = get_supabase_client()
+    if sb:
+        try:
+            sb.table("rubric_criteria").delete().eq("round_id", round_id).execute()
+            sb.table("rounds").delete().eq("id", round_id).execute()
+            sb.table("audit_log").insert({
+                "actor_id": actor_id,
+                "action": "ROUND_DELETE",
+                "entity_type": "ROUND",
+                "entity_id": round_id,
+                "details": {"deleted_round_id": round_id}
+            }).execute()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        global DEMO_ROUNDS
+        DEMO_ROUNDS = [r for r in DEMO_ROUNDS if str(r.get("id")) != str(round_id) and str(r.get("number")) != str(round_id)]
+
+    return {
+        "status": "success",
+        "round_id": round_id,
+        "message": "Round deleted successfully."
+    }
 
 
 @router.patch("/{round_id}/status")
