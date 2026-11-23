@@ -489,7 +489,9 @@ async def create_or_update_submission(payload: SubmissionPayload):
     sb = get_supabase_client()
     if sb:
         try:
-            res = sb.table("submissions").upsert(submission_record, on_conflict="team_id,round_id").execute()
+            # Omit string id "sub-xxx" so Postgres defaults to UUID gen_random_uuid()
+            sb_record = {k: v for k, v in submission_record.items() if k != "id"}
+            res = sb.table("submissions").upsert(sb_record, on_conflict="team_id,round_id").execute()
             if res.data:
                 DEMO_SUBMISSIONS[clean_id] = res.data[0]
                 return {"success": True, "submission": res.data[0]}
