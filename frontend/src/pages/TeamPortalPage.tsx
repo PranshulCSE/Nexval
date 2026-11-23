@@ -26,7 +26,7 @@ interface TeamSession {
   team_id: string;
   team_name: string;
   college: string;
-  track: string;
+  track?: string;
   members: string[];
   current_round: number;
   venue?: string;
@@ -359,7 +359,7 @@ export const TeamPortalPage: React.FC = () => {
                 </h2>
               </div>
               <p className="text-xs text-slate-500">
-                {team?.college} &bull; <span className="font-semibold text-slate-700">{team?.track}</span>
+                {team?.college || 'Geeta University'}{team?.track ? <> &bull; <span className="font-semibold text-slate-700">{team.track}</span></> : null}
               </p>
               <div className="pt-1 flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-amber-50/80 border border-amber-200/90 text-amber-900 px-2.5 py-1 rounded-lg">
