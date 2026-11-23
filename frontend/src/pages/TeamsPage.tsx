@@ -9,7 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
 import { TeamUploadModal } from '../components/teams/TeamUploadModal';
-import { Search, Plus, Filter, Users, School, Layers, CheckCircle2, XCircle, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { Search, Plus, Filter, Users, School, Layers, CheckCircle2, XCircle, ChevronLeft, ChevronRight, MessageSquare, Download, KeyRound } from 'lucide-react';
 import { TeamFeedbackModal } from '../components/TeamFeedbackModal';
 
 export interface TeamRecord {
@@ -18,6 +18,7 @@ export interface TeamRecord {
   team_name: string;
   college?: string;
   members: string[] | string;
+  passcode?: string;
   extra_data?: Record<string, any>;
   status: 'active' | 'eliminated';
   current_round: number;
@@ -229,6 +230,28 @@ export const TeamsPage: React.FC = () => {
     setCurrentPage(1);
   }, [search, statusFilter, roundFilter]);
 
+  const exportCredentialsCSV = () => {
+    const headers = "team_id,team_name,college,passcode\n";
+    const rows = teams
+      .map((t) => {
+        const pass = t.passcode || t.extra_data?.passcode || 'NEX-7K9P';
+        const cleanName = `"${(t.team_name || '').replace(/"/g, '""')}"`;
+        const cleanCollege = `"${(t.college || '').replace(/"/g, '""')}"`;
+        return `${t.team_id},${cleanName},${cleanCollege},${pass}`;
+      })
+      .join('\n');
+
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `nexhack_teams_passcodes_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    success('Export Generated', `Exported login credentials for ${teams.length} teams.`);
+  };
+
   const statusTabs = [
     { id: 'all', label: 'All Teams', count: teams.length },
     { id: 'active', label: 'Active', count: teams.filter((t) => t.status === 'active').length },
@@ -301,6 +324,18 @@ export const TeamsPage: React.FC = () => {
       },
     },
     {
+      header: 'Passcode',
+      cell: (t) => (
+        <span
+          className="font-mono text-xs text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold select-all"
+          title="Team Portal Login Passcode"
+        >
+          {t.passcode || t.extra_data?.passcode || 'NEX-7K9P'}
+        </span>
+      ),
+      className: 'w-28',
+    },
+    {
       header: 'Round',
       cell: (t) => (
         <Badge variant={t.current_round === 1 ? 'blue' : 'green'} className="text-[10px]">
@@ -353,13 +388,22 @@ export const TeamsPage: React.FC = () => {
         title="Teams Directory"
         subtitle="Manage participating hackathon teams, review rosters, and upload CSV/Excel files"
         action={
-          <Button
-            variant="primary"
-            onClick={() => setIsUploadOpen(true)}
-            leftIcon={<Plus className="w-4 h-4" />}
-          >
-            Upload Teams CSV/Excel
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={exportCredentialsCSV}
+              leftIcon={<Download className="w-4 h-4" />}
+            >
+              Export Credentials CSV
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => setIsUploadOpen(true)}
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              Upload Teams CSV/Excel
+            </Button>
+          </div>
         }
       />
 
