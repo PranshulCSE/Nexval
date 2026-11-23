@@ -40,7 +40,7 @@ const RootRedirect: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (profile?.role === 'admin') {
+  if (profile?.role === 'admin' || profile?.role === 'super_admin') {
     return <Navigate to="/admin" replace />;
   }
 
@@ -60,7 +60,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <AdminDashboard />
           </ProtectedRoute>
         }
@@ -68,7 +68,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin/teams"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <TeamsPage />
           </ProtectedRoute>
         }
@@ -76,7 +76,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin/judges"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <JudgesPage />
           </ProtectedRoute>
         }
@@ -84,7 +84,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin/rounds"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <RoundsPage />
           </ProtectedRoute>
         }
@@ -92,7 +92,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin/assignments"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <AssignmentsPage />
           </ProtectedRoute>
         }
@@ -100,7 +100,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin/leaderboard"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <LeaderboardPage />
           </ProtectedRoute>
         }
@@ -108,7 +108,7 @@ export const App: React.FC = () => {
       <Route
         path="/admin/analytics"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
             <AnalyticsPage />
           </ProtectedRoute>
         }
